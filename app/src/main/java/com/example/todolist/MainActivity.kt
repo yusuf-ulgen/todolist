@@ -1,13 +1,10 @@
 package com.example.todolist
 
-import TaskAdapter
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,7 +14,7 @@ import com.example.todolist.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private val taskList = mutableListOf<String>()
+    private val taskList = mutableListOf<Task>()
     private lateinit var adapter: TaskAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,10 +29,7 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
-
-        // Sürükleyerek taşıma
+        // Drag & drop
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             0
@@ -51,23 +45,26 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // swipe özelliği devre dışı
-            }
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+            override fun isLongPressDragEnabled(): Boolean = true
         })
+
         itemTouchHelper.attachToRecyclerView(recyclerView)
 
-// Silme fonksiyonunu adapter'a bağla
         adapter.onItemDelete = { position ->
             adapter.deleteItem(position)
+            updateTaskStats()
         }
 
-
+        adapter.onStatsChanged = {
+            updateTaskStats()
+        }
 
         binding.fab.setOnClickListener {
-            taskList.add("") // Alta ekle
+            taskList.add(Task(""))
             adapter.notifyItemInserted(taskList.lastIndex)
             binding.contentMain.todoRecyclerView.scrollToPosition(taskList.lastIndex)
+            updateTaskStats()
         }
     }
 
@@ -100,5 +97,11 @@ class MainActivity : AppCompatActivity() {
             }
             .create()
         dialog.show()
+    }
+
+    private fun updateTaskStats() {
+        val total = taskList.count { it.content.isNotBlank() }
+        val done = taskList.count { it.content.isNotBlank() && it.isChecked }
+        binding.taskStatsTextView.text = "Bugünün görevleri $done/$total"
     }
 }
