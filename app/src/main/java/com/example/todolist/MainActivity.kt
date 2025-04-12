@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import TaskAdapter
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
@@ -8,7 +9,9 @@ import android.view.MenuItem
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -32,10 +35,39 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
+        // Sürükleyerek taşıma
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val from = viewHolder.adapterPosition
+                val to = target.adapterPosition
+                adapter.moveItem(from, to)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                // swipe özelliği devre dışı
+            }
+        })
+        itemTouchHelper.attachToRecyclerView(recyclerView)
+
+// Silme fonksiyonunu adapter'a bağla
+        adapter.onItemDelete = { position ->
+            adapter.deleteItem(position)
+        }
+
+
+
         binding.fab.setOnClickListener {
-            taskList.add(0, "") // En üste boş görev ekle
-            adapter.notifyItemInserted(0)
-            binding.contentMain.todoRecyclerView.scrollToPosition(0)
+            taskList.add("") // Alta ekle
+            adapter.notifyItemInserted(taskList.lastIndex)
+            binding.contentMain.todoRecyclerView.scrollToPosition(taskList.lastIndex)
         }
     }
 
