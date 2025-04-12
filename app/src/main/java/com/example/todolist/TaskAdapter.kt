@@ -79,12 +79,12 @@ class TaskAdapter(
                 val timeText = holder.binding.timeTextView.text.toString()
 
                 if (taskText.isEmpty()) {
-                    Toast.makeText(context, "Görev adı boş olamaz", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Görev adı boş olamaz.", Toast.LENGTH_SHORT).show()
                     return@setOnEditorActionListener true
                 }
 
                 if (timeText == "Saat") {
-                    Toast.makeText(context, "Lütfen bir saat seçin", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Lütfen bir saat seçin.", Toast.LENGTH_SHORT).show()
                     return@setOnEditorActionListener true
                 }
 
