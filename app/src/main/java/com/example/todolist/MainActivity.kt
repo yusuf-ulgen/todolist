@@ -18,7 +18,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: TaskAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeHelper.applyTheme(ThemeHelper.loadTheme(this)) // ⬅ önce bu
         super.onCreate(savedInstanceState)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -61,7 +63,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fab.setOnClickListener {
-            taskList.add(Task(""))
+            taskList.add(Task("", "Saat"))
             adapter.notifyItemInserted(taskList.lastIndex)
             binding.contentMain.todoRecyclerView.scrollToPosition(taskList.lastIndex)
             updateTaskStats()

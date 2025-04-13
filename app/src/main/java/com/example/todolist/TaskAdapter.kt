@@ -1,8 +1,12 @@
 package com.example.todolist
 
 import android.app.AlertDialog
+import android.app.PendingIntent
 import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.graphics.Paint
+import android.os.Build
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.PopupMenu
@@ -82,6 +86,14 @@ class TaskAdapter(
                 holder.binding.taskEditText.isEnabled = false
                 holder.binding.taskCheckBox.visibility = View.VISIBLE
                 holder.binding.taskNumber.visibility = View.VISIBLE
+
+                // ✅ Alarm kurma
+                if (timeText != "Saat") {
+                    val timeParts = timeText.split(":")
+                    val hour = timeParts[0].toInt()
+                    val minute = timeParts[1].toInt()
+                    setAlarm(holder.itemView.context, task, hour, minute, position)
+                }
                 onStatsChanged?.invoke()
                 true
             } else false
@@ -142,6 +154,48 @@ class TaskAdapter(
             popup.show()
         }
     }
+
+    private fun setAlarm(context: Context, task: Task, hour: Int, minute: Int, id: Int) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+
+        // Android 12 ve sonrası için izin kontrolü
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Toast.makeText(context, "Alarm izni verilmemiş. Ayarlardan izin vermelisiniz.", Toast.LENGTH_LONG).show()
+
+                // Kullanıcıyı ayarlara yönlendirme
+                val intent = Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                context.startActivity(intent)
+                return // ❗ HATA ALMAMAK İÇİN MUTLAKA FONKSİYONDAN ÇIK
+            }
+        }
+
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            putExtra("title", task.content)
+            putExtra("id", id)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            id,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, hour)
+            set(java.util.Calendar.MINUTE, minute)
+            set(java.util.Calendar.SECOND, 0)
+        }
+
+        alarmManager.setExact(
+            android.app.AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
+    }
+
+
 
     override fun getItemCount(): Int = tasks.size
 
