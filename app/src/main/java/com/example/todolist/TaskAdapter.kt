@@ -6,7 +6,6 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Paint
-import android.os.Build
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.PopupMenu
@@ -14,17 +13,24 @@ import android.widget.TimePicker
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
+import kotlin.reflect.KFunction1
 
 class TaskAdapter(
-    private val tasks: MutableList<Task>
+    private var tasks: MutableList<Task>,
+    private val addTaskCallback: (Task) -> Unit, // Callback fonksiyonu
+    private val taskDao: TaskDao, // Burada doğru türde TaskDao geçiyoruz
+    var onStatsChanged: () -> Unit // `updateTaskStats` fonksiyonunu buraya callback olarak alıyoruz
 ) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     inner class TaskViewHolder(val binding: ItemTaskBinding) :
         RecyclerView.ViewHolder(binding.root)
 
     var onItemDelete: ((position: Int) -> Unit)? = null
-    var onStatsChanged: (() -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
         val binding = ItemTaskBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -82,31 +88,35 @@ class TaskAdapter(
                 }
 
                 task.content = taskText
+                task.time = timeText // Güncellenen zamanı veritabanına kaydetmek için
                 holder.binding.taskEditText.clearFocus()
                 holder.binding.taskEditText.isEnabled = false
                 holder.binding.taskCheckBox.visibility = View.VISIBLE
                 holder.binding.taskNumber.visibility = View.VISIBLE
 
-                // ✅ Alarm kurma
-                if (timeText != "Saat") {
-                    val timeParts = timeText.split(":")
-                    val hour = timeParts[0].toInt()
-                    val minute = timeParts[1].toInt()
-                    setAlarm(holder.itemView.context, task, hour, minute, position)
+                // Veritabanına güncelleme
+                GlobalScope.launch(Dispatchers.IO) {
+                    taskDao.updateTask(task) // Güncellenmiş görevi veritabanına kaydet
+                    withContext(Dispatchers.Main) {
+                        notifyItemChanged(position) // RecyclerView'ı güncelle
+                        onStatsChanged() // Günlük görev sayısını güncelle
+                    }
                 }
-                onStatsChanged?.invoke()
+
                 true
             } else false
         }
 
         holder.binding.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            task.isChecked = isChecked
-            holder.binding.taskEditText.paintFlags = if (isChecked) {
-                holder.binding.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            } else {
-                holder.binding.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+            task.isChecked = isChecked // Veritabanına kaydedilmesi gereken durum
+            // Veritabanında güncelleme
+            GlobalScope.launch(Dispatchers.IO) {
+                taskDao.updateTask(task) // Güncellenmiş görevi veritabanına kaydet
+                withContext(Dispatchers.Main) {
+                    notifyItemChanged(position) // RecyclerView'ı güncelle
+                    onStatsChanged?.invoke() // Günlük görev sayısını güncelle
+                }
             }
-            onStatsChanged?.invoke()
         }
 
         holder.itemView.setOnClickListener {
@@ -124,7 +134,7 @@ class TaskAdapter(
                             .setMessage("Bu görevi silmek istediğinize emin misiniz?")
                             .setPositiveButton("Evet") { _, _ ->
                                 onItemDelete?.invoke(position)
-                                onStatsChanged?.invoke()
+                                onStatsChanged() // Günlük görev sayısını güncelle
                             }
                             .setNegativeButton("Hayır", null)
                             .show()
@@ -155,47 +165,10 @@ class TaskAdapter(
         }
     }
 
-    private fun setAlarm(context: Context, task: Task, hour: Int, minute: Int, id: Int) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-
-        // Android 12 ve sonrası için izin kontrolü
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                Toast.makeText(context, "Alarm izni verilmemiş. Ayarlardan izin vermelisiniz.", Toast.LENGTH_LONG).show()
-
-                // Kullanıcıyı ayarlara yönlendirme
-                val intent = Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                context.startActivity(intent)
-                return // ❗ HATA ALMAMAK İÇİN MUTLAKA FONKSİYONDAN ÇIK
-            }
-        }
-
-        val intent = Intent(context, NotificationReceiver::class.java).apply {
-            putExtra("title", task.content)
-            putExtra("id", id)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val calendar = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, hour)
-            set(java.util.Calendar.MINUTE, minute)
-            set(java.util.Calendar.SECOND, 0)
-        }
-
-        alarmManager.setExact(
-            android.app.AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
-            pendingIntent
-        )
+    fun setTasks(newTasks: List<Task>) {
+        tasks = newTasks.toMutableList() // tasks listesini güncelle
+        notifyDataSetChanged() // RecyclerView'ı güncelle
     }
-
-
 
     override fun getItemCount(): Int = tasks.size
 
@@ -206,7 +179,14 @@ class TaskAdapter(
     }
 
     fun deleteItem(position: Int) {
-        tasks.removeAt(position)
-        notifyItemRemoved(position)
+        val taskToDelete = tasks[position]
+        // Veritabanında silme işlemi yapılmalı
+        GlobalScope.launch(Dispatchers.IO) {
+            taskDao.deleteTask(taskToDelete) // Veritabanından sil
+            withContext(Dispatchers.Main) {
+                tasks.removeAt(position)
+                notifyItemRemoved(position)
+            }
+        }
     }
 }
