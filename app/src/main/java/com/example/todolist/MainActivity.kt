@@ -15,6 +15,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adapter: TaskAdapter
     private lateinit var db: AppDatabase
     private lateinit var taskDao: TaskDao
+    private lateinit var resetTimeDao: ResetTimeDao
     private var tasks: List<Task> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,7 +38,14 @@ class MainActivity : AppCompatActivity() {
         // Room database setup
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
+        resetTimeDao = db.resetTimeDao()
         adapter = TaskAdapter(mutableListOf(), ::addTask, taskDao) { updateTaskStats() }
+
+        // Veritabanındaki görevleri yükle
+        loadTasks()
+
+        // Resetleme saati kontrolü
+        checkResetTime()  // Resetleme saati kontrolünü yapıyoruz
 
         val recyclerView = binding.contentMain.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -78,9 +87,6 @@ class MainActivity : AppCompatActivity() {
             val newTask = Task(content = "", time = "Saat")
             addTask(newTask)
         }
-
-        // Veritabanındaki görevleri yükle
-        loadTasks()
     }
 
     private fun loadTasks() {
@@ -89,7 +95,7 @@ class MainActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 tasks = taskList // Burada tasks'ı güncelliyoruz
                 adapter.setTasks(tasks) // Veriyi adaptöre aktar
-                updateTaskStats() // Günlük görev sayısını güncelle
+                updateTaskStats() // Görevlerin güncel sayısını göster
             }
         }
     }
@@ -137,5 +143,48 @@ class MainActivity : AppCompatActivity() {
             }
             .create()
         dialog.show()
+    }
+
+    private fun resetTasksAtSpecificTime() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
+            val currentTime = Calendar.getInstance()
+            val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
+            val currentMinute = currentTime.get(Calendar.MINUTE)
+
+            // Saat geldi mi kontrol et
+            if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
+                // Saat geldi, tüm görevlerin isChecked durumunu sıfırla
+                val tasks = taskDao.getAllTasks()
+                tasks.forEach { task ->
+                    task.isChecked = false
+                    taskDao.updateTask(task) // Veritabanını güncelle
+                }
+            }
+        }
+    }
+
+    private fun resetTasks() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val tasks = taskDao.getAllTasks()
+            tasks.forEach { task ->
+                task.isChecked = false
+                taskDao.updateTask(task) // Veritabanında güncelleniyor
+            }
+        }
+    }
+
+    private fun checkResetTime() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
+            val currentTime = Calendar.getInstance()
+            val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
+            val currentMinute = currentTime.get(Calendar.MINUTE)
+
+            // Saat geldi mi kontrol et
+            if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
+                resetTasks() // Eğer saat geldiyse görevleri sıfırla
+            }
+        }
     }
 }

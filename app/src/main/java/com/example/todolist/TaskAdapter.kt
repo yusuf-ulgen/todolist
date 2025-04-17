@@ -53,7 +53,17 @@ class TaskAdapter(
         holder.binding.taskCheckBox.visibility =
             if (task.content.isNotBlank()) View.VISIBLE else View.GONE
 
+        // Her checkbox'ı bağımsız olarak işaretleyin
         holder.binding.taskCheckBox.isChecked = task.isChecked
+
+        // Sadece bu görev için checkbox durumu değişsin
+        holder.binding.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            task.isChecked = isChecked // Yalnızca bu görev için geçerli
+            GlobalScope.launch(Dispatchers.IO) {
+                taskDao.updateTask(task) // Veritabanında güncelleme yapılır
+            }
+            onStatsChanged?.invoke() // Stats'ı güncelle
+        }
 
         holder.binding.timeTextView.setOnClickListener {
             val calendar = Calendar.getInstance()

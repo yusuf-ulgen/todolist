@@ -18,5 +18,10 @@ class Settings : AppCompatActivity() {
             val intent = Intent(this, ThemeActivity::class.java)
             startActivity(intent)
         }
+        // Resetleme saati butonuna tıklanırsa, ResetTimeActivity'ye geçiş yapılır
+        binding.resetTimeButton.setOnClickListener {
+            val intent2 = Intent(this, ResetTimeActivity::class.java)
+            startActivity(intent2)
+        }
     }
 }

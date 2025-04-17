@@ -5,9 +5,10 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Task::class], version = 2) // Versiyon numarasını artırdık
+@Database(entities = [Task::class, ResetTime::class], version = 3) // ResetTime entity'si de eklenmiş
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
+    abstract fun resetTimeDao(): ResetTimeDao // ResetTimeDao'yu buraya ekliyoruz
 
     companion object {
         @Volatile
@@ -19,8 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "task_database"
-                )
-                    .fallbackToDestructiveMigration() // Veritabanı şeması değiştikçe eski veriyi temizle
+                ).fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
