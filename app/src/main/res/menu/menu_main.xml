@@ -12,4 +12,10 @@
         android:title="Feedback"
         android:orderInCategory="101"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_logout"
+        android:title="Log out"
+        android:orderInCategory="101"
+        app:showAsAction="never" />
 </menu>

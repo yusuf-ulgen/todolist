@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        var mAuth = FirebaseAuth.getInstance()
+
+        // Firebase kullanıcı oturumu kontrolü
+        val user = mAuth.currentUser
+        if (user == null) {
+            // Kullanıcı giriş yapmadıysa, Giris Activity'sine yönlendir
+            val intent = Intent(this, Giris::class.java)
+            startActivity(intent)
+            finish() // MainActivity'yi kapat
+        }
 
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this)) // ⬅ önce bu
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -130,8 +142,19 @@ class MainActivity : AppCompatActivity() {
                 showFeedbackDialog()
                 true
             }
+            R.id.action_logout -> {
+                logOut()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun logOut() {
+        FirebaseAuth.getInstance().signOut()  // Firebase ile çıkış yap
+        val intent = Intent(this, Giris::class.java) // Giris Activity'sine yönlendir
+        startActivity(intent)
+        finish() // MainActivity'yi kapat
     }
 
     private fun showFeedbackDialog() {

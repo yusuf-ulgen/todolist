@@ -57,9 +57,21 @@ class Giris : AppCompatActivity() {
             val email = mailId.text.toString()
             val password = sifreId.text.toString()
 
-            // Firebase ile kullanıcı kaydı yapalım
+            // Eğer kullanıcı zaten giriş yapmışsa
+            val user = mAuth.currentUser
             if (email.isNotEmpty() && password.isNotEmpty()) {
-                registerUser(email, password)
+                mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            // Kayıt başarılı, MainActivity'ye yönlendir
+                            val intent = Intent(this, MainActivity::class.java)
+                            startActivity(intent)
+                            finish() // Giris Activity'sini kapat
+                        } else {
+                            // Kayıt başarısız oldu
+                            Toast.makeText(this, "Kayıt sırasında hata: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
             } else {
                 Toast.makeText(this, "Lütfen tüm alanları doldurun.", Toast.LENGTH_SHORT).show()
             }
