@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -35,10 +36,13 @@ class MainActivity : AppCompatActivity() {
         // Firebase kullanıcı oturumu kontrolü
         val user = mAuth.currentUser
         if (user == null) {
-            // Kullanıcı giriş yapmadıysa, Giris Activity'sine yönlendir
+            // Eğer kullanıcı giriş yapmamışsa Giris ekranına yönlendir
             val intent = Intent(this, Giris::class.java)
             startActivity(intent)
             finish() // MainActivity'yi kapat
+        } else {
+            // Kullanıcı giriş yaptıysa, MainActivity'yi aç
+            setContentView(R.layout.activity_main)
         }
 
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this)) // ⬅ önce bu
@@ -96,7 +100,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.fab.setOnClickListener {
             Log.d("MainActivity", "FAB clicked")
-            val newTask = Task(content = "", time = "Saat")
+            val newTask = Task(content = "", time = "")  // Zorunlu saat girmeyi kaldırdık
             addTask(newTask)
         }
     }
@@ -114,8 +118,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun addTask(task: Task) {
         GlobalScope.launch(Dispatchers.IO) {
-            taskDao.insertTask(task) // Veritabanına yeni görev ekle
-            loadTasks() // Veritabanını yeniden yükle
+            // Eğer saatsiz görev değilse (yani zaman belirtilmişse)
+            if (task.time.isNotBlank() && task.time != "Saat") {
+                // Veritabanında aynı saatte görev olup olmadığını kontrol et
+                val existingTask = taskDao.getTaskByTime(task.time)
+
+                // Eğer o saatte başka bir görev varsa
+                if (existingTask != null) {
+                    // Kullanıcıya uyarı mesajı göster
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Bu saatte zaten bir görev var!", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // Eğer o saatte görev yoksa, yeni görevi ekle
+                    taskDao.insertTask(task)
+                    loadTasks() // Veritabanını yeniden yükle
+                }
+            } else {
+                // Eğer saatsiz görevse, zaman kontrolü yapmadan ekle
+                taskDao.insertTask(task)
+                loadTasks() // Veritabanını yeniden yükle
+            }
         }
     }
 
@@ -200,14 +223,22 @@ class MainActivity : AppCompatActivity() {
     private fun checkResetTime() {
         GlobalScope.launch(Dispatchers.IO) {
             val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
-            val currentTime = Calendar.getInstance()
-            val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = currentTime.get(Calendar.MINUTE)
 
-            // Saat geldi mi kontrol et
-            if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
-                resetTasks() // Eğer saat geldiyse görevleri sıfırla
+            // Veritabanı boşsa, işlemi güvenli bir şekilde kontrol et
+            if (resetTime != null) {
+                val currentTime = Calendar.getInstance()
+                val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
+                val currentMinute = currentTime.get(Calendar.MINUTE)
+
+                // Saat geldi mi kontrol et
+                if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
+                    resetTasks() // Eğer saat geldiyse görevleri sıfırla
+                }
+            } else {
+                // Eğer resetTime null dönerse, kullanıcıya uyarı verebiliriz veya varsayılan bir işlem yapabiliriz
+                Log.w("MainActivity", "Reset time not found in the database.")
             }
         }
     }
+
 }

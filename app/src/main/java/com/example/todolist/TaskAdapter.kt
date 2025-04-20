@@ -1,11 +1,7 @@
 package com.example.todolist
 
 import android.app.AlertDialog
-import android.app.PendingIntent
 import android.app.TimePickerDialog
-import android.content.Context
-import android.content.Intent
-import android.graphics.Paint
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.PopupMenu
@@ -18,7 +14,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
-import kotlin.reflect.KFunction1
 
 class TaskAdapter(
     private var tasks: MutableList<Task>,
@@ -194,8 +189,10 @@ class TaskAdapter(
         GlobalScope.launch(Dispatchers.IO) {
             taskDao.deleteTask(taskToDelete) // Veritabanından sil
             withContext(Dispatchers.Main) {
-                tasks.removeAt(position)
-                notifyItemRemoved(position)
+                tasks.removeAt(position) // Listeyi güncelle
+                // Listeyi yeniden sıralayalım (sıralama işlemi burada yapılır)
+                tasks.sortBy { it.time } // Örneğin, zamanı göre sıralama
+                notifyDataSetChanged() // RecyclerView'ı güncelle
             }
         }
     }
