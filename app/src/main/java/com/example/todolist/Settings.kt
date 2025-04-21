@@ -14,14 +14,28 @@ class Settings : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Tema Seçimi Butonuna Tıklama İşlemi
         binding.themeButton.setOnClickListener {
             val intent = Intent(this, ThemeActivity::class.java)
             startActivity(intent)
         }
-        // Resetleme saati butonuna tıklanırsa, ResetTimeActivity'ye geçiş yapılır
+
+        // Resetleme Zamanı Butonuna Tıklama İşlemi
         binding.resetTimeButton.setOnClickListener {
-            val intent2 = Intent(this, ResetTimeActivity::class.java)
-            startActivity(intent2)
+            val intent = Intent(this, ResetTimeActivity::class.java)
+            startActivity(intent)
+        }
+
+        // İstatistiklerim Butonuna Tıklama İşlemi
+        binding.statisticsButton.setOnClickListener {
+            val intent = Intent(this, StatisticsActivity::class.java)
+            startActivity(intent)
+        }
+
+        // Şifre Butonuna Tıklama İşlemi
+        binding.changePasswordButton.setOnClickListener {
+            val intent = Intent(this, ChangePasswordActivity::class.java)
+            startActivity(intent)
         }
     }
 }

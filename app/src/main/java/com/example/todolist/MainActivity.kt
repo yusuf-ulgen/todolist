@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -185,14 +186,61 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showFeedbackDialog() {
+        // Geri bildirim formu için ilk dialog
+        val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
+        val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
+        val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
+
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Feedback")
-            .setMessage("Buraya geri bildirim formu gelecek.")
-            .setPositiveButton("Kapat") { dialogInterface, _ ->
-                dialogInterface.dismiss()
+            .setTitle("Problem Başlığı")
+            .setView(dialogView)
+            .setPositiveButton("İleri") { _, _ ->
+                // Başlık ve açıklama kontrolü
+                val title = titleEditText.text.toString().trim()
+                val message = messageEditText.text.toString().trim()
+
+                if (title.isEmpty()) {
+                    Toast.makeText(this, "Lütfen bir başlık girin!", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                if (message.isEmpty()) {
+                    Toast.makeText(this, "Lütfen probleminizi girin!", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                // Eğer başlık ve açıklama doluysa, ikinci dialogu göster
+                showSubmitFeedbackDialog(title, message)
+            }
+            .setNegativeButton("İptal") { dialogInterface, _ ->
+                dialogInterface.dismiss()  // Dialogu kapat
             }
             .create()
+
         dialog.show()
+    }
+
+    private fun showSubmitFeedbackDialog(title: String, message: String) {
+        // İkinci dialog - Geri bildirimi göndermek için
+        val submitDialog = AlertDialog.Builder(this)
+            .setTitle("Geri Bildirim")
+            .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
+            .setPositiveButton("Gönder") { _, _ ->
+                // Geri bildirimi işleme koyabiliriz burada
+                // Burada örnek olarak bir Toast mesajı gösteriyoruz
+                Toast.makeText(this, "Geri bildiriminiz gönderildi!", Toast.LENGTH_SHORT).show()
+
+                // Geri bildirim gönderildikten sonra yapılacak işlemler:
+                // - Veritabanına kaydedilebilir.
+                // - E-posta gönderilebilir.
+                // - vb.
+            }
+            .setNegativeButton("İptal") { dialogInterface, _ ->
+                dialogInterface.dismiss()  // Dialogu kapat
+            }
+            .create()
+
+        submitDialog.show()
     }
 
     private fun resetTasksAtSpecificTime() {

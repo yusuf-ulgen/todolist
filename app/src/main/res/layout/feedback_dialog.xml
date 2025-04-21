@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="16dp">
+
+    <!-- Başlık için EditText (giriş alanı) -->
+    <EditText
+        android:id="@+id/feedbackTitleEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Problem Başlığı"
+        android:padding="8dp"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:backgroundTint="@android:color/darker_gray"
+        android:inputType="textCapSentences"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="1" />
+
+    <!-- Mesaj için EditText (giriş alanı) -->
+    <EditText
+        android:id="@+id/feedbackMessageEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Problemi Girin..."
+        android:padding="8dp"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:backgroundTint="@android:color/darker_gray"
+        android:inputType="textCapSentences|textMultiLine"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/feedbackTitleEditText"
+        app:layout_constraintWidth_percent="1" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

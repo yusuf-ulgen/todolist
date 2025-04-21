@@ -56,6 +56,7 @@ dependencies {
     implementation ("androidx.navigation:navigation-ui-ktx:2.4.1") // Navigation UI
 
     implementation("androidx.room:room-runtime:$room_version")
+    implementation(libs.androidx.activity)
     kapt("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
     implementation ("com.google.firebase:firebase-messaging:23.1.1")
