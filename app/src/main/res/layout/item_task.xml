@@ -39,6 +39,9 @@
         android:id="@+id/taskEditText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:singleLine="true"
         android:hint="Görev girin..."
         android:backgroundTint="@android:color/darker_gray"
         android:padding="8dp"
@@ -48,7 +51,7 @@
         app:layout_constraintStart_toEndOf="@id/taskCheckBox"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintWidth_percent="0.55" />
+        app:layout_constraintWidth_percent="0.58" />
 
     <!-- Saat -->
     <TextView

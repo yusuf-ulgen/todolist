@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        supportActionBar?.hide()
         var mAuth = FirebaseAuth.getInstance()
 
         // Firebase kullanıcı oturumu kontrolü
@@ -70,11 +70,10 @@ class MainActivity : AppCompatActivity() {
         // Drag & drop
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
-            0
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
             override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
+                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
                 val from = viewHolder.adapterPosition
@@ -83,7 +82,11 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.adapterPosition
+                adapter.deleteItem(position) // Öğeyi sil
+            }
+
             override fun isLongPressDragEnabled(): Boolean = true
         })
 
@@ -142,6 +145,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Günlük görev sayısını güncelleyen fonksiyon
     private fun updateTaskStats() {
         val total = tasks.size // Toplam görev sayısı
         val done = tasks.count { it.isChecked } // Tamamlanan görev sayısı

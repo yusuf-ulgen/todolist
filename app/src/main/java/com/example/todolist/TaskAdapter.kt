@@ -5,7 +5,6 @@ import android.app.TimePickerDialog
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.PopupMenu
-import android.widget.TimePicker
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
@@ -17,13 +16,12 @@ import java.util.*
 
 class TaskAdapter(
     private var tasks: MutableList<Task>,
-    private val addTaskCallback: (Task) -> Unit, // Callback fonksiyonu
-    private val taskDao: TaskDao, // Burada doğru türde TaskDao geçiyoruz
+    private val addTaskCallback: (Task) -> Unit,
+    private val taskDao: TaskDao,
     var onStatsChanged: () -> Unit // `updateTaskStats` fonksiyonunu buraya callback olarak alıyoruz
 ) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
-    inner class TaskViewHolder(val binding: ItemTaskBinding) :
-        RecyclerView.ViewHolder(binding.root)
+    inner class TaskViewHolder(val binding: ItemTaskBinding) : RecyclerView.ViewHolder(binding.root)
 
     var onItemDelete: ((position: Int) -> Unit)? = null
 
@@ -37,6 +35,13 @@ class TaskAdapter(
         holder.binding.taskEditText.setText(task.content)
         holder.binding.timeTextView.text = task.time
 
+        // Eğer saat belirtildiyse, TextView'i buna göre güncelle
+        if (task.time.isNotBlank() && task.time != "Saat") {
+            holder.binding.timeTextView.text = task.time
+        } else {
+            holder.binding.timeTextView.text = "Saat"
+        }
+
         holder.binding.pinIcon.visibility =
             if (task.isPinned) View.VISIBLE else View.GONE
 
@@ -48,16 +53,13 @@ class TaskAdapter(
         holder.binding.taskCheckBox.visibility =
             if (task.content.isNotBlank()) View.VISIBLE else View.GONE
 
-        // Her checkbox'ı bağımsız olarak işaretleyin
         holder.binding.taskCheckBox.isChecked = task.isChecked
-
-        // Sadece bu görev için checkbox durumu değişsin
         holder.binding.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            task.isChecked = isChecked // Yalnızca bu görev için geçerli
+            task.isChecked = isChecked
             GlobalScope.launch(Dispatchers.IO) {
-                taskDao.updateTask(task) // Veritabanında güncelleme yapılır
+                taskDao.updateTask(task)
             }
-            onStatsChanged?.invoke() // Stats'ı güncelle
+            onStatsChanged() // Stats'ı güncelle
         }
 
         holder.binding.timeTextView.setOnClickListener {
@@ -67,7 +69,7 @@ class TaskAdapter(
 
             TimePickerDialog(
                 holder.itemView.context,
-                { _: TimePicker, selectedHour: Int, selectedMinute: Int ->
+                { _, selectedHour, selectedMinute ->
                     val timeText = String.format("%02d:%02d", selectedHour, selectedMinute)
                     holder.binding.timeTextView.text = timeText
                     task.time = timeText
@@ -80,47 +82,62 @@ class TaskAdapter(
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 val context = holder.itemView.context
                 val taskText = holder.binding.taskEditText.text.toString().trim()
-                val timeText = holder.binding.timeTextView.text.toString()
 
                 if (taskText.isEmpty()) {
                     Toast.makeText(context, "Görev adı boş olamaz.", Toast.LENGTH_SHORT).show()
                     return@setOnEditorActionListener true
                 }
 
-                if (timeText == "Saat") {
-                    Toast.makeText(context, "Lütfen bir saat seçin.", Toast.LENGTH_SHORT).show()
-                    return@setOnEditorActionListener true
-                }
-
                 task.content = taskText
-                task.time = timeText // Güncellenen zamanı veritabanına kaydetmek için
-                holder.binding.taskEditText.clearFocus()
-                holder.binding.taskEditText.isEnabled = false
-                holder.binding.taskCheckBox.visibility = View.VISIBLE
-                holder.binding.taskNumber.visibility = View.VISIBLE
+                task.time = holder.binding.timeTextView.text.toString() // Saat de güncelleniyor
 
                 // Veritabanına güncelleme
                 GlobalScope.launch(Dispatchers.IO) {
-                    taskDao.updateTask(task) // Güncellenmiş görevi veritabanına kaydet
+                    taskDao.updateTask(task)
                     withContext(Dispatchers.Main) {
                         notifyItemChanged(position) // RecyclerView'ı güncelle
                         onStatsChanged() // Günlük görev sayısını güncelle
                     }
                 }
-
                 true
             } else false
         }
 
-        holder.binding.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
-            task.isChecked = isChecked // Veritabanına kaydedilmesi gereken durum
-            // Veritabanında güncelleme
+        // Checkbox tıklanırsa, task'ın isChecked durumunu güncelle
+        holder.binding.taskCheckBox.setOnClickListener {
+            // Checkbox'ı tıklayınca kontrol et
+            val isChecked = holder.binding.taskCheckBox.isChecked
+
+            // Eğer checkbox işaretlenmişse
+            if (isChecked) {
+                // Diğer checkbox'ları `false` yap
+                tasks.filter { it != task }.forEach {
+                    it.isChecked = false
+                    GlobalScope.launch(Dispatchers.IO) {
+                        taskDao.updateTask(it) // Diğer görevlerin checkbox durumunu güncelle
+                    }
+                }
+            }
+
+            // Şimdi seçilen görev için `isChecked` değerini güncelle
+            task.isChecked = isChecked
+
+            // Veritabanını güncelle
             GlobalScope.launch(Dispatchers.IO) {
                 taskDao.updateTask(task) // Güncellenmiş görevi veritabanına kaydet
+
                 withContext(Dispatchers.Main) {
-                    notifyItemChanged(position) // RecyclerView'ı güncelle
-                    onStatsChanged?.invoke() // Günlük görev sayısını güncelle
+                    // RecyclerView'i güncelle
+                    notifyItemChanged(position)
+                    onStatsChanged() // Günlük görev sayısını güncelle
                 }
+            }
+
+            // Saatin gösterilmesi
+            if (task.time.isBlank() || task.time == "Saat") {
+                holder.binding.timeTextView.text = "Saat"
+            } else {
+                holder.binding.timeTextView.text = task.time
             }
         }
 
@@ -171,8 +188,8 @@ class TaskAdapter(
     }
 
     fun setTasks(newTasks: List<Task>) {
-        tasks = newTasks.toMutableList() // tasks listesini güncelle
-        notifyDataSetChanged() // RecyclerView'ı güncelle
+        tasks = newTasks.toMutableList()
+        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int = tasks.size
@@ -189,10 +206,9 @@ class TaskAdapter(
         GlobalScope.launch(Dispatchers.IO) {
             taskDao.deleteTask(taskToDelete) // Veritabanından sil
             withContext(Dispatchers.Main) {
-                tasks.removeAt(position) // Listeyi güncelle
-                // Listeyi yeniden sıralayalım (sıralama işlemi burada yapılır)
-                tasks.sortBy { it.time } // Örneğin, zamanı göre sıralama
-                notifyDataSetChanged() // RecyclerView'ı güncelle
+                tasks.removeAt(position)
+                notifyItemRemoved(position)
+                onStatsChanged() // Günlük görev sayısını güncelle
             }
         }
     }

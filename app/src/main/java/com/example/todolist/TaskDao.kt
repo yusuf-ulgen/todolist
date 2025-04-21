@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-
     @Insert
     suspend fun insertTask(task: Task)
 
