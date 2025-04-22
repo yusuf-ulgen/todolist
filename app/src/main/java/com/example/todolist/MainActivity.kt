@@ -31,52 +31,47 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize view binding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)  // Önce binding ile setContentView'i yapın
+
+        // Hide action bar
         supportActionBar?.hide()
+
         var mAuth = FirebaseAuth.getInstance()
 
         // Firebase kullanıcı oturumu kontrolü
         val user = mAuth.currentUser
         if (user == null) {
-            // Eğer kullanıcı giriş yapmamışsa Giris ekranına yönlendir
             val intent = Intent(this, Giris::class.java)
             startActivity(intent)
-            finish() // MainActivity'yi kapat
-        } else {
-            // Kullanıcı giriş yaptıysa, MainActivity'yi aç
-            setContentView(R.layout.activity_main)
+            finish()
         }
 
-        ThemeHelper.applyTheme(ThemeHelper.loadTheme(this)) // ⬅ önce bu
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // ThemeHelper ve diğer işlemler
+        ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
 
         setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
-        // Room database setup
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
         resetTimeDao = db.resetTimeDao()
         adapter = TaskAdapter(mutableListOf(), ::addTask, taskDao) { updateTaskStats() }
 
-        // Veritabanındaki görevleri yükle
         loadTasks()
-
-        // Resetleme saati kontrolü
-        checkResetTime()  // Resetleme saati kontrolünü yapıyoruz
+        checkResetTime()
 
         val recyclerView = binding.contentMain.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        // Drag & drop
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
-            override fun onMove(
-                recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 val from = viewHolder.adapterPosition
                 val to = target.adapterPosition
                 adapter.moveItem(from, to)
@@ -90,9 +85,9 @@ class MainActivity : AppCompatActivity() {
 
             override fun isLongPressDragEnabled(): Boolean = true
         })
-
         itemTouchHelper.attachToRecyclerView(recyclerView)
 
+        // Diğer kodlar burada
         adapter.onItemDelete = { position ->
             adapter.deleteItem(position) // Görevi sil
             updateTaskStats() // Günlük görev sayısını güncelle
@@ -103,7 +98,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fab.setOnClickListener {
-            Log.d("MainActivity", "FAB clicked")
             val newTask = Task(content = "", time = "")  // Zorunlu saat girmeyi kaldırdık
             addTask(newTask)
         }
@@ -122,37 +116,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun addTask(task: Task) {
         GlobalScope.launch(Dispatchers.IO) {
-            // Eğer saatsiz görev değilse (yani zaman belirtilmişse)
             if (task.time.isNotBlank() && task.time != "Saat") {
-                // Veritabanında aynı saatte görev olup olmadığını kontrol et
                 val existingTask = taskDao.getTaskByTime(task.time)
-
-                // Eğer o saatte başka bir görev varsa
                 if (existingTask != null) {
-                    // Kullanıcıya uyarı mesajı göster
                     runOnUiThread {
                         Toast.makeText(this@MainActivity, "Bu saatte zaten bir görev var!", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    // Eğer o saatte görev yoksa, yeni görevi ekle
                     taskDao.insertTask(task)
                     loadTasks() // Veritabanını yeniden yükle
                 }
             } else {
-                // Eğer saatsiz görevse, zaman kontrolü yapmadan ekle
                 taskDao.insertTask(task)
                 loadTasks() // Veritabanını yeniden yükle
             }
         }
     }
 
-    // Günlük görev sayısını güncelleyen fonksiyon
     private fun updateTaskStats() {
         val total = tasks.size // Toplam görev sayısı
         val done = tasks.count { it.isChecked } // Tamamlanan görev sayısı
         binding.taskStatsTextView.text = "Bugünün görevleri $done/$total"
     }
-
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
@@ -179,14 +164,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logOut() {
-        FirebaseAuth.getInstance().signOut()  // Firebase ile çıkış yap
-        val intent = Intent(this, Giris::class.java) // Giris Activity'sine yönlendir
+        FirebaseAuth.getInstance().signOut()
+        val intent = Intent(this, Giris::class.java)
         startActivity(intent)
-        finish() // MainActivity'yi kapat
+        finish()
     }
 
     private fun showFeedbackDialog() {
-        // Geri bildirim formu için ilk dialog
         val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
         val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
         val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
@@ -195,7 +179,6 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Problem Başlığı")
             .setView(dialogView)
             .setPositiveButton("İleri") { _, _ ->
-                // Başlık ve açıklama kontrolü
                 val title = titleEditText.text.toString().trim()
                 val message = messageEditText.text.toString().trim()
 
@@ -209,11 +192,10 @@ class MainActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
 
-                // Eğer başlık ve açıklama doluysa, ikinci dialogu göster
                 showSubmitFeedbackDialog(title, message)
             }
             .setNegativeButton("İptal") { dialogInterface, _ ->
-                dialogInterface.dismiss()  // Dialogu kapat
+                dialogInterface.dismiss()
             }
             .create()
 
@@ -221,22 +203,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSubmitFeedbackDialog(title: String, message: String) {
-        // İkinci dialog - Geri bildirimi göndermek için
         val submitDialog = AlertDialog.Builder(this)
             .setTitle("Geri Bildirim")
             .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
             .setPositiveButton("Gönder") { _, _ ->
-                // Geri bildirimi işleme koyabiliriz burada
-                // Burada örnek olarak bir Toast mesajı gösteriyoruz
                 Toast.makeText(this, "Geri bildiriminiz gönderildi!", Toast.LENGTH_SHORT).show()
-
-                // Geri bildirim gönderildikten sonra yapılacak işlemler:
-                // - Veritabanına kaydedilebilir.
-                // - E-posta gönderilebilir.
-                // - vb.
             }
             .setNegativeButton("İptal") { dialogInterface, _ ->
-                dialogInterface.dismiss()  // Dialogu kapat
+                dialogInterface.dismiss()
             }
             .create()
 
@@ -250,9 +224,7 @@ class MainActivity : AppCompatActivity() {
             val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
             val currentMinute = currentTime.get(Calendar.MINUTE)
 
-            // Saat geldi mi kontrol et
             if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
-                // Saat geldi, tüm görevlerin isChecked durumunu sıfırla
                 val tasks = taskDao.getAllTasks()
                 tasks.forEach { task ->
                     task.isChecked = false
@@ -276,21 +248,17 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
 
-            // Veritabanı boşsa, işlemi güvenli bir şekilde kontrol et
             if (resetTime != null) {
                 val currentTime = Calendar.getInstance()
                 val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
                 val currentMinute = currentTime.get(Calendar.MINUTE)
 
-                // Saat geldi mi kontrol et
                 if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
                     resetTasks() // Eğer saat geldiyse görevleri sıfırla
                 }
             } else {
-                // Eğer resetTime null dönerse, kullanıcıya uyarı verebiliriz veya varsayılan bir işlem yapabiliriz
                 Log.w("MainActivity", "Reset time not found in the database.")
             }
         }
     }
-
 }

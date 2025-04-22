@@ -34,24 +34,47 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- Görev Yazısı -->
-    <EditText
-        android:id="@+id/taskEditText"
+    <!-- Görev metni ve Pin ikonu bir arada olacak container -->
+    <FrameLayout
+        android:id="@+id/taskFrame"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:singleLine="true"
-        android:hint="Görev girin..."
-        android:backgroundTint="@android:color/darker_gray"
-        android:padding="8dp"
-        android:textSize="16sp"
-        android:imeOptions="actionDone"
-        android:inputType="textCapSentences|text"
         app:layout_constraintStart_toEndOf="@id/taskCheckBox"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintWidth_percent="0.58" />
+        app:layout_constraintWidth_percent="0.58">
+
+        <!-- Görev Yazısı: Varsayılan paddingStart sabit, pin eklenince dinamik olarak adapter içinde artırılacak -->
+        <EditText
+            android:id="@+id/taskEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:scrollbars="vertical"
+            android:singleLine="true"
+            android:hint="Görev girin..."
+            android:backgroundTint="@android:color/darker_gray"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingEnd="8dp"
+            android:textSize="16sp"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences|text" />
+
+        <!-- Pin Ikonu: EditText içine overlay -->
+        <ImageView
+            android:id="@+id/pinIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginStart="4dp"
+            android:contentDescription="Pin Icon"
+            android:src="@drawable/ic"
+            android:visibility="gone" />
+
+    </FrameLayout>
 
     <!-- Saat -->
     <TextView
@@ -64,24 +87,10 @@
         android:textColor="@android:color/black"
         android:backgroundTint="@android:color/darker_gray"
         android:padding="8dp"
-        app:layout_constraintStart_toEndOf="@id/taskEditText"
+        app:layout_constraintStart_toEndOf="@id/taskFrame"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintWidth_percent="0.25" />
-
-    <ImageView
-        android:id="@+id/pinIcon"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="4dp"
-        android:contentDescription="Pin Icon"
-        android:src="@drawable/ic"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/timeTextView"
-        app:layout_constraintStart_toEndOf="@id/taskEditText"
-        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
