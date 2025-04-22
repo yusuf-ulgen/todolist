@@ -2,7 +2,6 @@ package com.example.todolist
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todolist.databinding.ActivityChangePasswordBinding
 import com.google.firebase.auth.EmailAuthProvider
@@ -21,44 +20,61 @@ class ChangePasswordActivity : AppCompatActivity() {
 
         // Şifreyi değiştirme butonuna tıklama işlemi
         binding.savePasswordButton.setOnClickListener {
-            val oldPassword = binding.oldPassword.text.toString().trim()
-            val newPassword = binding.newPassword.text.toString().trim()
+            // 1) Alanlardaki önceki hataları temizle
+            binding.oldPassword.error = null
+            binding.newPassword.error = null
+            binding.confirmPassword.error = null
+
+            val oldPassword     = binding.oldPassword.text.toString().trim()
+            val newPassword     = binding.newPassword.text.toString().trim()
             val confirmPassword = binding.confirmPassword.text.toString().trim()
 
-            if (newPassword == confirmPassword) {
-                val user = mAuth.currentUser
+            // 2) Basit validasyon
+            var valid = true
+            if (oldPassword.isEmpty()) {
+                binding.oldPassword.error = "Eski şifreyi giriniz"
+                binding.oldPassword.requestFocus()
+                valid = false
+            }
+            if (newPassword.isEmpty()) {
+                binding.newPassword.error = "Yeni şifreyi giriniz"
+                if (valid) binding.newPassword.requestFocus()
+                valid = false
+            }
+            if (confirmPassword.isEmpty()) {
+                binding.confirmPassword.error = "Onay şifresini giriniz"
+                if (valid) binding.confirmPassword.requestFocus()
+                valid = false
+            }
+            if (valid && newPassword != confirmPassword) {
+                binding.confirmPassword.error = "Yeni şifreler uyuşmuyor"
+                binding.confirmPassword.requestFocus()
+                valid = false
+            }
+            if (!valid) return@setOnClickListener
 
-                if (user != null && oldPassword.isNotEmpty() && newPassword.isNotEmpty()) {
-                    // Eski şifreyi doğrulama
-                    val credential = EmailAuthProvider.getCredential(user.email!!, oldPassword)
-
-                    user.reauthenticate(credential).addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            // Eski şifre doğrulandı, şifreyi değiştirme işlemi
-                            user.updatePassword(newPassword).addOnCompleteListener { updateTask ->
-                                if (updateTask.isSuccessful) {
-                                    // Şifre başarılı şekilde değiştirildi
-                                    Toast.makeText(this, "Şifre başarıyla değiştirildi", Toast.LENGTH_SHORT).show()
-
-                                    // Kullanıcıyı giriş ekranına yönlendir
-                                    val intent = Intent(this, Giris::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    startActivity(intent)
-                                    finish()  // Bu aktiviteyi kapatıyoruz
-                                } else {
-                                    // Şifre değiştirilemediyse
-                                    Toast.makeText(this, "Şifre değiştirilemedi: ${updateTask.exception?.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
+            // 3) Kullanıcıyı yeniden doğrula
+            val user = mAuth.currentUser ?: return@setOnClickListener
+            val credential = EmailAuthProvider.getCredential(user.email!!, oldPassword)
+            user.reauthenticate(credential).addOnCompleteListener { authTask ->
+                if (authTask.isSuccessful) {
+                    // 4) Şifre güncelle
+                    user.updatePassword(newPassword).addOnCompleteListener { updateTask ->
+                        if (updateTask.isSuccessful) {
+                            // Başarılıysa giriş ekranına dön
+                            val intent = Intent(this, Giris::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            finish()
                         } else {
-                            // Eski şifre doğru değil
-                            Toast.makeText(this, "Eski şifre yanlış", Toast.LENGTH_SHORT).show()
+                            binding.newPassword.error = "Şifre değiştirilemedi: ${updateTask.exception?.message}"
+                            binding.newPassword.requestFocus()
                         }
                     }
+                } else {
+                    binding.oldPassword.error = "Eski şifre yanlış"
+                    binding.oldPassword.requestFocus()
                 }
-            } else {
-                // Şifreler uyuşmuyor
-                Toast.makeText(this, "Yeni şifreler uyuşmuyor", Toast.LENGTH_SHORT).show()
             }
         }
     }

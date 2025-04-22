@@ -7,12 +7,12 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -67,25 +67,38 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+        val touchCallback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
-            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
                 val from = viewHolder.adapterPosition
-                val to = target.adapterPosition
-                adapter.moveItem(from, to)
+                val to   = target.adapterPosition
+                adapter.moveItem(from, to)      // sadece yer değiştir
                 return true
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
-                adapter.deleteItem(position) // Öğeyi sil
+            override fun clearView(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder
+            ) {
+                super.clearView(recyclerView, viewHolder)
+                // Drag&Drop bittiğinde tüm numaraları yenile
+                adapter.notifyItemRangeChanged(0, adapter.itemCount)
             }
 
-            override fun isLongPressDragEnabled(): Boolean = true
-        })
-        itemTouchHelper.attachToRecyclerView(recyclerView)
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val pos = viewHolder.adapterPosition
+                adapter.deleteItem(pos)   // sadece sil
+            }
+
+            override fun isLongPressDragEnabled() = true
+        }
+        ItemTouchHelper(touchCallback).attachToRecyclerView(recyclerView)
 
         // Diğer kodlar burada
         adapter.onItemDelete = { position ->
@@ -101,6 +114,12 @@ class MainActivity : AppCompatActivity() {
             val newTask = Task(content = "", time = "")  // Zorunlu saat girmeyi kaldırdık
             addTask(newTask)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadTasks()
+        checkResetTime()
     }
 
     private fun loadTasks() {
@@ -120,22 +139,28 @@ class MainActivity : AppCompatActivity() {
                 val existingTask = taskDao.getTaskByTime(task.time)
                 if (existingTask != null) {
                     runOnUiThread {
-                        Toast.makeText(this@MainActivity, "Bu saatte zaten bir görev var!", Toast.LENGTH_SHORT).show()
+                        Snackbar.make(
+                            binding.root,
+                            "Bu saatte zaten bir görev var!",
+                            Snackbar.LENGTH_SHORT
+                        ).show()
                     }
                 } else {
                     taskDao.insertTask(task)
-                    loadTasks() // Veritabanını yeniden yükle
+                    loadTasks()
                 }
             } else {
                 taskDao.insertTask(task)
-                loadTasks() // Veritabanını yeniden yükle
+                loadTasks()
             }
         }
     }
 
     private fun updateTaskStats() {
-        val total = tasks.size // Toplam görev sayısı
-        val done = tasks.count { it.isChecked } // Tamamlanan görev sayısı
+        // MainActivity.tasks yerine adapter.getTasks() kullanıyoruz
+        val current = adapter.getTasks()
+        val total = current.size
+        val done  = current.count { it.isChecked }
         binding.taskStatsTextView.text = "Bugünün görevleri $done/$total"
     }
 
@@ -175,46 +200,46 @@ class MainActivity : AppCompatActivity() {
         val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
         val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
 
-        val dialog = AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Problem Başlığı")
             .setView(dialogView)
             .setPositiveButton("İleri") { _, _ ->
                 val title = titleEditText.text.toString().trim()
                 val message = messageEditText.text.toString().trim()
 
+                // Hataları EditText üzerinde göster
+                var valid = true
                 if (title.isEmpty()) {
-                    Toast.makeText(this, "Lütfen bir başlık girin!", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
+                    titleEditText.error = "Lütfen bir başlık girin!"
+                    titleEditText.requestFocus()
+                    valid = false
                 }
-
                 if (message.isEmpty()) {
-                    Toast.makeText(this, "Lütfen probleminizi girin!", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
+                    messageEditText.error = "Lütfen probleminizi girin!"
+                    if (valid) messageEditText.requestFocus()
+                    valid = false
                 }
+                if (!valid) return@setPositiveButton
 
                 showSubmitFeedbackDialog(title, message)
             }
-            .setNegativeButton("İptal") { dialogInterface, _ ->
-                dialogInterface.dismiss()
-            }
-            .create()
-
-        dialog.show()
+            .setNegativeButton("İptal", null)
+            .show()
     }
 
     private fun showSubmitFeedbackDialog(title: String, message: String) {
-        val submitDialog = AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Geri Bildirim")
             .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
             .setPositiveButton("Gönder") { _, _ ->
-                Toast.makeText(this, "Geri bildiriminiz gönderildi!", Toast.LENGTH_SHORT).show()
+                Snackbar.make(
+                    binding.root,
+                    "Geri bildiriminiz gönderildi!",
+                    Snackbar.LENGTH_SHORT
+                ).show()
             }
-            .setNegativeButton("İptal") { dialogInterface, _ ->
-                dialogInterface.dismiss()
-            }
-            .create()
-
-        submitDialog.show()
+            .setNegativeButton("İptal", null)
+            .show()
     }
 
     private fun resetTasksAtSpecificTime() {

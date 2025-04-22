@@ -34,50 +34,12 @@ class TaskAdapter(
         val task = tasks[position]
         val b = holder.binding
 
-        // İçerikleri ata
+        // 1) İçerik ve Saat
         b.taskEditText.setText(task.content)
-        b.timeTextView.text = task.time
+        b.timeTextView.text = if (task.time.isNotBlank() && task.time != "Saat") task.time else "Saat"
 
-        // Saat ayarı
-        if (task.time.isNotBlank() && task.time != "Saat") {
-            b.timeTextView.text = task.time
-        } else {
-            b.timeTextView.text = "Saat"
-        }
-
-        // Pin ikonunu göster/gizle
-        b.pinIcon.visibility = if (task.isPinned) View.VISIBLE else View.GONE
-
-        // --- BURADAN BAŞLIYOR: Dinamik padding ayarı ---
-        val ctx = holder.itemView.context
-        val basePadding = ctx.resources.getDimensionPixelSize(R.dimen.padding_default) // 8dp
-        if (task.isPinned) {
-            val extra = ctx.resources.getDimensionPixelSize(R.dimen.padding_extra)   // 24dp
-            b.taskEditText.setPadding(
-                basePadding + extra,
-                b.taskEditText.paddingTop,
-                b.taskEditText.paddingEnd,
-                b.taskEditText.paddingBottom
-            )
-        } else {
-            b.taskEditText.setPadding(
-                basePadding,
-                b.taskEditText.paddingTop,
-                b.taskEditText.paddingEnd,
-                b.taskEditText.paddingBottom
-            )
-        }
-        // --- DİNAMİK PADDING BİTTİ ---
-
-        // Görev numarası
-        b.taskNumber.text = (position + 1).toString()
-        b.taskNumber.visibility = if (task.content.isNotBlank()) View.VISIBLE else View.GONE
-
-        // EditText etkinlik
-        b.taskEditText.isEnabled = task.content.isBlank()
-        b.taskCheckBox.visibility = if (task.content.isNotBlank()) View.VISIBLE else View.GONE
-
-        // Checkbox durum yönetimi
+        // 2) isChecked durumu — önce eski listener'ı temizle
+        b.taskCheckBox.setOnCheckedChangeListener(null)
         b.taskCheckBox.isChecked = task.isChecked
         b.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
             task.isChecked = isChecked
@@ -87,84 +49,79 @@ class TaskAdapter(
             onStatsChanged()
         }
 
-        // Saat tıklama
+        // 3) isPinned durumu
+        b.pinIcon.visibility = if (task.isPinned) View.VISIBLE else View.GONE
+
+        // 4) Dinamik padding
+        val ctx = holder.itemView.context
+        val base = ctx.resources.getDimensionPixelSize(R.dimen.padding_default)
+        val extra = ctx.resources.getDimensionPixelSize(R.dimen.padding_extra)
+        b.taskEditText.setPadding(
+            if (task.isPinned) base + extra else base,
+            b.taskEditText.paddingTop,
+            b.taskEditText.paddingEnd,
+            b.taskEditText.paddingBottom
+        )
+
+        // 5) Görev numarası ve checkbox görünürlüğü
+        b.taskNumber.text = (position + 1).toString()
+        b.taskNumber.visibility = if (task.content.isNotBlank()) View.VISIBLE else View.GONE
+        b.taskCheckBox.visibility = if (task.content.isNotBlank()) View.VISIBLE else View.GONE
+
+        // 6) Düzenleme modu
+        b.taskEditText.isEnabled = task.content.isBlank()
+
+        // 7) Saat seçici
         b.timeTextView.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            val hour = calendar.get(Calendar.HOUR_OF_DAY)
-            val minute = calendar.get(Calendar.MINUTE)
+            val cal = Calendar.getInstance()
             TimePickerDialog(
-                holder.itemView.context,
-                { _, selectedHour, selectedMinute ->
-                    val timeText = String.format("%02d:%02d", selectedHour, selectedMinute)
+                ctx,
+                { _, h, m ->
+                    val timeText = String.format("%02d:%02d", h, m)
                     b.timeTextView.text = timeText
                     task.time = timeText
+                    GlobalScope.launch(Dispatchers.IO) {
+                        taskDao.updateTask(task)
+                    }
                 },
-                hour, minute, true
+                cal.get(Calendar.HOUR_OF_DAY),
+                cal.get(Calendar.MINUTE),
+                true
             ).show()
         }
 
-        // EditText IME action
+        // 8) Görevi kaydet (IME action)
         b.taskEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val context = holder.itemView.context
-                val taskText = b.taskEditText.text.toString().trim()
-                if (taskText.isEmpty()) {
-                    Toast.makeText(context, "Görev adı boş olamaz.", Toast.LENGTH_SHORT).show()
+                val txt = b.taskEditText.text.toString().trim()
+                if (txt.isEmpty()) {
+                    b.taskEditText.error = "Görev adı boş olamaz."
+                    b.taskEditText.requestFocus()
                     return@setOnEditorActionListener true
                 }
-                task.content = taskText
-                task.time = b.timeTextView.text.toString()
+                task.content = txt
                 GlobalScope.launch(Dispatchers.IO) {
                     taskDao.updateTask(task)
-                    withContext(Dispatchers.Main) {
-                        notifyItemChanged(position)
-                        onStatsChanged()
-                        b.taskEditText.isEnabled = false
-                        b.taskCheckBox.visibility = View.VISIBLE
-                        b.taskNumber.visibility = View.VISIBLE
-                    }
                 }
+                notifyItemChanged(position)
+                onStatsChanged()
+                b.taskEditText.isEnabled = false
+                b.taskNumber.visibility = View.VISIBLE
+                b.taskCheckBox.visibility = View.VISIBLE
                 true
             } else false
         }
 
-        // Checkbox tek-seçim mantığı
-        b.taskCheckBox.setOnClickListener {
-            val isChecked = b.taskCheckBox.isChecked
-            if (isChecked) {
-                tasks.filter { it != task }.forEach {
-                    it.isChecked = false
-                    GlobalScope.launch(Dispatchers.IO) {
-                        taskDao.updateTask(it)
-                    }
-                }
-            }
-            task.isChecked = isChecked
-            GlobalScope.launch(Dispatchers.IO) {
-                taskDao.updateTask(task)
-                withContext(Dispatchers.Main) {
-                    notifyItemChanged(position)
-                    onStatsChanged()
-                }
-            }
-            if (task.time.isBlank() || task.time == "Saat") {
-                b.timeTextView.text = "Saat"
-            } else {
-                b.timeTextView.text = task.time
-            }
-        }
-
-        // Satır menüsü
+        // 9) Satır menüsü (Sil, Düzenle, Başa Sabitle)
         holder.itemView.setOnClickListener {
-            val popup = PopupMenu(holder.itemView.context, it)
+            val popup = PopupMenu(ctx, it)
             popup.menu.add("Düzenle")
             popup.menu.add("Sil")
             popup.menu.add("Başa Sabitle")
-
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.title) {
                     "Sil" -> {
-                        AlertDialog.Builder(holder.itemView.context)
+                        AlertDialog.Builder(ctx)
                             .setTitle("Görevi sil")
                             .setMessage("Bu görevi silmek istediğinize emin misiniz?")
                             .setPositiveButton("Evet") { _, _ ->
@@ -182,12 +139,16 @@ class TaskAdapter(
                     "Başa Sabitle" -> {
                         val pinnedCount = tasks.count { it.isPinned }
                         if (pinnedCount >= 5) {
-                            Toast.makeText(it.context, "En fazla 5 görev sabitlenebilir!", Toast.LENGTH_SHORT).show()
+                            b.taskEditText.error = "En fazla 5 görev sabitlenebilir!"
+                            b.taskEditText.requestFocus()
                         } else {
                             task.isPinned = true
+                            GlobalScope.launch(Dispatchers.IO) {
+                                taskDao.updateTask(task)
+                            }
                             tasks.removeAt(position)
-                            val pinIndex = tasks.indexOfLast { it.isPinned }
-                            tasks.add(if (pinIndex == -1) 0 else pinIndex + 1, task)
+                            val idx = tasks.indexOfLast { it.isPinned }
+                            tasks.add(if (idx == -1) 0 else idx + 1, task)
                             notifyDataSetChanged()
                         }
                     }
@@ -222,4 +183,5 @@ class TaskAdapter(
             }
         }
     }
+    fun getTasks(): List<Task> = tasks
 }
