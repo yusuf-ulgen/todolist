@@ -78,8 +78,26 @@ class MainActivity : AppCompatActivity() {
             ): Boolean {
                 val from = viewHolder.adapterPosition
                 val to   = target.adapterPosition
-                adapter.moveItem(from, to)      // sadece yer değiştir
-                return true
+
+                // Adapter’dan güncel listeyi al
+                val list = adapter.getTasks()
+                // “Pinli” görev sayısı
+                val pinnedCount = list.count { it.isPinned }
+
+                // Kaydırdığımız satır pinli mi?
+                val fromPinned = list[from].isPinned
+                // Taşımak istediğimiz hedef pozisyon pinli mi?
+                val toPinned   = list[to].isPinned
+
+                // Eğer her ikisi de pinliler bölgesindeyse veya her ikisi de pinsiz bölgedeyse, taşı
+                if ((from < pinnedCount && to < pinnedCount) ||
+                    (from >= pinnedCount && to >= pinnedCount)) {
+                    adapter.moveItem(from, to)
+                    return true
+                }
+
+                // Bölge atlamaya izin verme
+                return false
             }
 
             override fun clearView(

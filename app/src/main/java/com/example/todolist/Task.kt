@@ -10,5 +10,6 @@ data class Task(
     @ColumnInfo(name = "content") var content: String,
     @ColumnInfo(name = "time") var time: String,
     @ColumnInfo(name = "isChecked") var isChecked: Boolean = false, // Checkbox durumu
-    @ColumnInfo(name = "isPinned") var isPinned: Boolean = false
+    @ColumnInfo(name = "isPinned") var isPinned: Boolean = false,
+    @ColumnInfo(name = "sortOrder") var sortOrder: Int = 0
 )

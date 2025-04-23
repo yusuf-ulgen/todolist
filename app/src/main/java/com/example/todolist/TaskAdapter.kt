@@ -167,9 +167,19 @@ class TaskAdapter(
     override fun getItemCount(): Int = tasks.size
 
     fun moveItem(from: Int, to: Int) {
+        // 1) Bellekte taşı
         val task = tasks.removeAt(from)
         tasks.add(to, task)
         notifyItemMoved(from, to)
+
+        // 2) Tüm bu bölgedeki öğelerin sortOrder’ını yeniden yaz
+        GlobalScope.launch(Dispatchers.IO) {
+            tasks.forEachIndexed { index, t ->
+                // pinli ve pinsiz karışık ama DAO sıralı çektiği için index tam olarak liste sırasına denk
+                t.sortOrder = index
+                taskDao.updateTask(t)
+            }
+        }
     }
 
     fun deleteItem(position: Int) {
