@@ -18,7 +18,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -153,22 +156,31 @@ class MainActivity : AppCompatActivity() {
 
     private fun addTask(task: Task) {
         GlobalScope.launch(Dispatchers.IO) {
+            // 1) Mevcut tüm görevleri alın (sıralı geliyor: isPinned DESC, sortOrder ASC)
+            val existing = taskDao.getAllTasks()
+
+            // 2) Yeni görevin sortOrder’ını listenin sonuna koy
+            //    Böylece pinned olsun ya da olmasın, en sona itelenecek
+            task.sortOrder = existing.size
+
+            // 3) Zaman çakışması kontrolü (varsa snackbar, yoksa ekle)
             if (task.time.isNotBlank() && task.time != "Saat") {
-                val existingTask = taskDao.getTaskByTime(task.time)
-                if (existingTask != null) {
-                    runOnUiThread {
+                val conflict = taskDao.getTaskByTime(task.time)
+                if (conflict != null) {
+                    withContext(Dispatchers.Main) {
                         Snackbar.make(
                             binding.root,
                             "Bu saatte zaten bir görev var!",
                             Snackbar.LENGTH_SHORT
                         ).show()
                     }
-                } else {
-                    taskDao.insertTask(task)
-                    loadTasks()
+                    return@launch
                 }
-            } else {
-                taskDao.insertTask(task)
+            }
+
+            // 4) DB’ye ekle ve UI’ı yenile
+            taskDao.insertTask(task)
+            withContext(Dispatchers.Main) {
                 loadTasks()
             }
         }
@@ -301,6 +313,35 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 Log.w("MainActivity", "Reset time not found in the database.")
+            }
+        }
+    }
+
+    private fun recordAndResetTasks() {
+        GlobalScope.launch(Dispatchers.IO) {
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            val all = taskDao.getAllTasks()
+            val completed = all.count { it.isChecked }
+            val total     = all.size
+
+            // 1) DailyStat kaydet
+            db.dailyStatDao().upsert(DailyStat(today, completed, total))
+
+            // 2) TaskHistory kaydet
+            val history = all.map {
+                TaskHistory(
+                    date = today,
+                    content = it.content,
+                    time = it.time,
+                    isChecked = it.isChecked
+                )
+            }
+            db.taskHistoryDao().insertAll(history)
+
+            // 3) Görevleri sıfırla
+            all.forEach {
+                it.isChecked = false
+                taskDao.updateTask(it)
             }
         }
     }

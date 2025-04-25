@@ -7,21 +7,22 @@
     android:padding="16dp">
 
     <TextView
-        android:id="@+id/titleText"
+        android:id="@+id/dateHeader"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Son 30 Günün İstatistikleri"
-        android:textSize="18sp"
+        android:text="3 Mayıs 2025"
+        android:textSize="20sp"
         android:textStyle="bold"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/statsRecycler"
+        android:id="@+id/historyRecycler"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/titleText"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/dateHeader"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
