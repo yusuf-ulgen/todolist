@@ -1,7 +1,6 @@
 package com.example.todolist
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
@@ -18,4 +17,7 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE time = :time LIMIT 1")
     suspend fun getTaskByTime(time: String): Task?
+
+    @Query("SELECT * FROM tasks WHERE time != '' AND time != 'Saat'")
+    suspend fun getAllTimedTasks(): List<Task>
 }

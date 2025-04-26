@@ -10,7 +10,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// StatisticsActivity.kt
 class StatisticsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStatisticsBinding
     private lateinit var db: AppDatabase
@@ -36,4 +35,3 @@ class StatisticsActivity : AppCompatActivity() {
         }
     }
 }
-

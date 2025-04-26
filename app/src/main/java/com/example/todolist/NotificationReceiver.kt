@@ -37,4 +37,3 @@ class NotificationReceiver : BroadcastReceiver() {
         manager.notify(taskId, builder.build())
     }
 }
-
