@@ -7,10 +7,12 @@ import androidx.room.Query
 
 @Dao
 interface ResetTimeDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertResetTime(resetTime: ResetTime)
 
     @Query("SELECT * FROM reset_time LIMIT 1")
-    suspend fun getResetTime(): ResetTime
+    suspend fun getResetTime(): ResetTime?
+
+    @Query("DELETE FROM reset_time")
+    suspend fun deleteAll()
 }

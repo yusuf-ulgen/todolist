@@ -1,11 +1,11 @@
 package com.example.todolist
 
 import android.app.AlertDialog
+import android.widget.TimePicker
 import android.app.TimePickerDialog
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.PopupMenu
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +74,7 @@ class TaskAdapter(
         // 7) Saat seçici
         b.timeTextView.setOnClickListener {
             val cal = Calendar.getInstance()
+            // 24h view parametresi son positional argüman olarak zaten true
             TimePickerDialog(
                 ctx,
                 { _, h, m ->
@@ -86,7 +87,7 @@ class TaskAdapter(
                 },
                 cal.get(Calendar.HOUR_OF_DAY),
                 cal.get(Calendar.MINUTE),
-                true
+                true  // <-- 24h modu garantiler
             ).show()
         }
 
@@ -117,12 +118,15 @@ class TaskAdapter(
             val popup = PopupMenu(ctx, it)
             popup.menu.add("Düzenle")
             popup.menu.add("Sil")
-            popup.menu.add("Başa Sabitle")
+            // Tek bir öğe: duruma göre metni değiştiriyoruz
+            val pinTitle = if (task.isPinned) "Sabitlemeyi Kaldır" else "Başa Sabitle"
+            popup.menu.add(pinTitle)
+
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.title) {
                     "Sil" -> {
                         AlertDialog.Builder(ctx)
-                            .setTitle("Görevi sil")
+                            .setTitle("Görevi Sil")
                             .setMessage("Bu görevi silmek istediğinize emin misiniz?")
                             .setPositiveButton("Evet") { _, _ ->
                                 onItemDelete?.invoke(position)
@@ -136,32 +140,42 @@ class TaskAdapter(
                         b.taskEditText.requestFocus()
                         b.taskEditText.setSelection(b.taskEditText.text.length)
                     }
-                    "Başa Sabitle" -> {
-                        val pinnedCount = tasks.count { it.isPinned }
-                        if (pinnedCount >= 5) {
-                            b.taskEditText.error = "En fazla 5 görev sabitlenebilir!"
-                            b.taskEditText.requestFocus()
-                        } else {
-                            task.isPinned = true
+                    pinTitle -> {
+                        if (task.isPinned) {
+                            // Sabitlemeyi kaldır
+                            task.isPinned = false
                             GlobalScope.launch(Dispatchers.IO) {
                                 taskDao.updateTask(task)
                             }
+                            // Sadece kendi konumundan çıkart
                             tasks.removeAt(position)
-                            val idx = tasks.indexOfLast { it.isPinned }
-                            tasks.add(if (idx == -1) 0 else idx + 1, task)
-                            notifyDataSetChanged()
+                            // Pinli bölgenin sonuna yeniden ekle
+                            val insertPos = tasks.indexOfLast { it.isPinned } + 1
+                            tasks.add(insertPos, task)
+                        } else {
+                            // Başa sabitle
+                            val pinnedCount = tasks.count { it.isPinned }
+                            if (pinnedCount >= 5) {
+                                b.taskEditText.error = "En fazla 5 görev sabitlenebilir!"
+                                b.taskEditText.requestFocus()
+                            } else {
+                                task.isPinned = true
+                                GlobalScope.launch(Dispatchers.IO) {
+                                    taskDao.updateTask(task)
+                                }
+                                tasks.removeAt(position)
+                                // Pinliler arasının en sonuna ekle
+                                val insertPos = tasks.indexOfLast { it.isPinned }
+                                tasks.add(if (insertPos == -1) 0 else insertPos + 1, task)
+                            }
                         }
+                        notifyDataSetChanged()
                     }
                 }
                 true
             }
             popup.show()
         }
-    }
-
-    fun setTasks(newTasks: List<Task>) {
-        tasks = newTasks.toMutableList()
-        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int = tasks.size
@@ -193,5 +207,11 @@ class TaskAdapter(
             }
         }
     }
+
+    fun setTasks(newTasks: List<Task>) {
+        tasks = newTasks.toMutableList()
+        notifyDataSetChanged()
+    }
+
     fun getTasks(): List<Task> = tasks
 }

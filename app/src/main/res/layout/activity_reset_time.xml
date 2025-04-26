@@ -40,4 +40,26 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="40dp"/>
 
+    <!-- Kaydedilen Reset Saati Gösterimi -->
+    <TextView
+        android:id="@+id/savedResetTimeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="24dp"
+        android:text="Kaydedilen Reset Saati:"
+        android:textSize="16sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/saveResetTimeButton" />
+
+    <TextView
+        android:id="@+id/savedResetTimeValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--:--"
+        android:textSize="16sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/savedResetTimeLabel"
+        app:layout_constraintStart_toEndOf="@id/savedResetTimeLabel"
+        android:layout_marginStart="8dp"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

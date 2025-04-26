@@ -50,6 +50,7 @@
             android:exported="false" />
 
         <receiver android:name=".NotificationReceiver" />
+        <receiver android:name=".ResetReceiver"/>
     </application>
 
 </manifest>

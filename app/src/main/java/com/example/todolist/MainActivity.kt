@@ -1,12 +1,18 @@
 package com.example.todolist
 
+import android.app.AlarmManager
 import android.app.AlertDialog
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.os.Handler
+import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,7 +26,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +36,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var taskDao: TaskDao
     private lateinit var resetTimeDao: ResetTimeDao
     private var tasks: List<Task> = mutableListOf()
+
+    // Bu flag, drag/swipe tamamlanmadan yenisini engelliyor
+    private var isMoving = false
+    private val moveResetHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +70,15 @@ class MainActivity : AppCompatActivity() {
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
         resetTimeDao = db.resetTimeDao()
-        adapter = TaskAdapter(mutableListOf(), ::addTask, taskDao) { updateTaskStats() }
+        adapter = TaskAdapter(
+            mutableListOf(),    // 1. param: başlangıç listesi
+            ::addTask,          // 2. param: addTask callback
+            taskDao,            // 3. param: TaskDao
+            { updateTaskStats() } // 4. param: onStatsChanged callback
+        )
 
+        checkAndPerformReset()
         loadTasks()
-        checkResetTime()
 
         val recyclerView = binding.contentMain.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -76,30 +90,25 @@ class MainActivity : AppCompatActivity() {
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
+                vh: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                val from = viewHolder.adapterPosition
-                val to   = target.adapterPosition
+                if (isMoving) return false
+                isMoving = true
 
-                // Adapter’dan güncel listeyi al
+                val from = vh.adapterPosition
+                val to = target.adapterPosition
                 val list = adapter.getTasks()
-                // “Pinli” görev sayısı
                 val pinnedCount = list.count { it.isPinned }
 
-                // Kaydırdığımız satır pinli mi?
-                val fromPinned = list[from].isPinned
-                // Taşımak istediğimiz hedef pozisyon pinli mi?
-                val toPinned   = list[to].isPinned
-
-                // Eğer her ikisi de pinliler bölgesindeyse veya her ikisi de pinsiz bölgedeyse, taşı
                 if ((from < pinnedCount && to < pinnedCount) ||
-                    (from >= pinnedCount && to >= pinnedCount)) {
+                    (from >= pinnedCount && to >= pinnedCount)
+                ) {
                     adapter.moveItem(from, to)
+                    scheduleMoveReset()
                     return true
                 }
-
-                // Bölge atlamaya izin verme
+                scheduleMoveReset()
                 return false
             }
 
@@ -137,10 +146,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun scheduleMoveReset() {
+        moveResetHandler.removeCallbacksAndMessages(null)
+        moveResetHandler.postDelayed({ isMoving = false }, 150)
+    }
+
     override fun onResume() {
         super.onResume()
         loadTasks()
-        checkResetTime()
+        checkAndPerformReset()
     }
 
     private fun loadTasks() {
@@ -272,77 +286,92 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun resetTasksAtSpecificTime() {
+    //  Reset kontrol + kayıt + sıfırlama
+    private fun checkAndPerformReset() {
         GlobalScope.launch(Dispatchers.IO) {
-            val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
-            val currentTime = Calendar.getInstance()
-            val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = currentTime.get(Calendar.MINUTE)
+            val resetTime = resetTimeDao.getResetTime() ?: return@launch
 
-            if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
-                val tasks = taskDao.getAllTasks()
-                tasks.forEach { task ->
-                    task.isChecked = false
-                    taskDao.updateTask(task) // Veritabanını güncelle
+            val now = Calendar.getInstance()
+            val h = now.get(Calendar.HOUR_OF_DAY)
+            val m = now.get(Calendar.MINUTE)
+            val nowSecond = now.get(Calendar.SECOND)
+
+            // Bugünün anahtarı
+            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                .format(now.time)
+
+            // Daha önce bu gün resetlendi mi?
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            if (prefs.getString("last_reset_day", "") == todayKey) return@launch
+
+            // Toplam dakikaya çevir ve karşılaştır
+            val nowTotal   = h * 60 + m
+            val resetTotal = resetTime.resetHour * 60 + resetTime.resetMinute
+
+            if (nowTotal > resetTotal || (nowTotal == resetTotal && nowSecond >= 0)) {
+                // 1) İstatistik kaydet
+                val allTasks  = taskDao.getAllTasks()
+                val completed = allTasks.count { it.isChecked }
+                val total     = allTasks.size
+                db.dailyStatDao().upsert(DailyStat(todayKey, completed, total))
+
+                // 2) History kaydet
+                val history = allTasks.map {
+                    TaskHistory(
+                        date      = todayKey,
+                        content   = it.content,
+                        time      = it.time,
+                        isChecked = it.isChecked
+                    )
+                }
+                db.taskHistoryDao().insertAll(history)
+
+                // 3) Tümünü sıfırla
+                allTasks.forEach {
+                    it.isChecked = false
+                    taskDao.updateTask(it)
+                }
+
+                // 4) Bugün sıfırlandı kaydet
+                prefs.edit().putString("last_reset_day", todayKey).apply()
+
+                // 5) UI thread’de listeyi yenile
+                withContext(Dispatchers.Main) {
+                    loadTasks()
                 }
             }
         }
     }
 
-    private fun resetTasks() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val tasks = taskDao.getAllTasks()
-            tasks.forEach { task ->
-                task.isChecked = false
-                taskDao.updateTask(task) // Veritabanında güncelleniyor
+    private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        // 13+ için izin kontrolü
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                // Kullanıcıyı Ayarlar > Alarmlar kısmına yönlendirebilirsiniz
+                Toast.makeText(this, "Exact alarm izni yok", Toast.LENGTH_SHORT).show()
+                return
             }
         }
-    }
 
-    private fun checkResetTime() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val resetTime = resetTimeDao.getResetTime() // Reset saati veritabanından al
+        val intent  = Intent(this, ResetReceiver::class.java)
+        val pending = PendingIntent.getBroadcast(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
-            if (resetTime != null) {
-                val currentTime = Calendar.getInstance()
-                val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
-                val currentMinute = currentTime.get(Calendar.MINUTE)
-
-                if (currentHour == resetTime.resetHour && currentMinute == resetTime.resetMinute) {
-                    resetTasks() // Eğer saat geldiyse görevleri sıfırla
-                }
-            } else {
-                Log.w("MainActivity", "Reset time not found in the database.")
-            }
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, resetHour)
+            set(Calendar.MINUTE, resetMinute)
+            set(Calendar.SECOND, 0)
+            if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
         }
-    }
 
-    private fun recordAndResetTasks() {
-        GlobalScope.launch(Dispatchers.IO) {
-            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            val all = taskDao.getAllTasks()
-            val completed = all.count { it.isChecked }
-            val total     = all.size
-
-            // 1) DailyStat kaydet
-            db.dailyStatDao().upsert(DailyStat(today, completed, total))
-
-            // 2) TaskHistory kaydet
-            val history = all.map {
-                TaskHistory(
-                    date = today,
-                    content = it.content,
-                    time = it.time,
-                    isChecked = it.isChecked
-                )
-            }
-            db.taskHistoryDao().insertAll(history)
-
-            // 3) Görevleri sıfırla
-            all.forEach {
-                it.isChecked = false
-                taskDao.updateTask(it)
-            }
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            cal.timeInMillis,
+            pending
+        )
     }
 }
