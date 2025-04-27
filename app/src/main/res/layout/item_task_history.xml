@@ -4,13 +4,15 @@
     android:orientation="horizontal"
     android:padding="12dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@color/creamBackground">
 
     <CheckBox
         android:id="@+id/doneCheck"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:clickable="false"/>
+        android:clickable="false"
+        android:tint="@color/creamPrimary"/>
 
     <TextView
         android:id="@+id/contentText"
@@ -18,11 +20,16 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:paddingStart="8dp"
-        android:text="Görev içeriği"/>
+        android:text="Görev içeriği"
+        android:textColor="@color/creamOnBackground"
+        android:textSize="16sp"/>
 
     <TextView
         android:id="@+id/timeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="12:30"/>
+        android:text="12:30"
+        android:textColor="@color/creamPrimaryVariant"
+        android:textSize="14sp"/>
+
 </LinearLayout>

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
+    android:background="@color/white"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -15,32 +17,36 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize" />
-
+            android:layout_height="?attr/actionBarSize"
+            app:backgroundTint="@color/creamPrimary"
+            app:titleTextColor="@color/creamOnPrimary"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <include
         android:id="@+id/contentMain"
-        layout="@layout/content_main" />
+        layout="@layout/content_main"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
-        app:srcCompat="@android:drawable/ic_input_add" />
+        android:layout_gravity="bottom|end"
+        app:srcCompat="@android:drawable/ic_input_add"
+        app:backgroundTint="@color/creamPrimaryVariant"
+        app:tint="@color/creamOnPrimary"/>
 
     <TextView
         android:id="@+id/taskStatsTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="12dp"
         android:text="Bugünün görevleri 0/0"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:gravity="center"
-        android:padding="12dp"
-        tools:text="Bugünün görevleri 2/7" />
-
+        android:textColor="@color/creamOnBackground"
+        tools:text="Bugünün görevleri 2/7"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

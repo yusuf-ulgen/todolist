@@ -20,4 +20,10 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE time != '' AND time != 'Saat'")
     suspend fun getAllTimedTasks(): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE userId = :userId ORDER BY isPinned DESC, sortOrder ASC")
+    suspend fun getTasksByUserId(userId: String): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE time = :time AND userId = :userId LIMIT 1")
+    suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task?
 }

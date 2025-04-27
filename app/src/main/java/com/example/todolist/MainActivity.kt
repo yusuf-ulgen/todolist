@@ -132,8 +132,13 @@ class MainActivity : AppCompatActivity() {
 
         // Diğer kodlar burada
         adapter.onItemDelete = { position ->
-            adapter.deleteItem(position) // Görevi sil
-            updateTaskStats() // Günlük görev sayısını güncelle
+            GlobalScope.launch(Dispatchers.IO) {
+                taskDao.deleteTask(tasks[position])
+                withContext(Dispatchers.Main) {
+                    adapter.deleteItem(position)
+                    updateTaskStats()
+                }
+            }
         }
 
         adapter.onStatsChanged = {
@@ -141,7 +146,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.fab.setOnClickListener {
-            val newTask = Task(content = "", time = "")  // Zorunlu saat girmeyi kaldırdık
+            val newTask = Task(
+                userId = FirebaseAuth.getInstance().currentUser?.uid ?: "",  // Kullanıcı ID
+                content = "",
+                time = ""
+            )
             addTask(newTask)
         }
     }
@@ -157,29 +166,29 @@ class MainActivity : AppCompatActivity() {
         checkAndPerformReset()
     }
 
+    private val mAuth = FirebaseAuth.getInstance()
+
     private fun loadTasks() {
+        val currentUser = mAuth.currentUser ?: return
         GlobalScope.launch(Dispatchers.IO) {
-            val taskList = taskDao.getAllTasks() // Veritabanından görevleri al
+            val taskList = taskDao.getTasksByUserId(currentUser.uid)
             withContext(Dispatchers.Main) {
-                tasks = taskList // Burada tasks'ı güncelliyoruz
-                adapter.setTasks(tasks) // Veriyi adaptöre aktar
-                updateTaskStats() // Görevlerin güncel sayısını göster
+                tasks = taskList
+                adapter.setTasks(tasks)
+                updateTaskStats()
             }
         }
     }
 
     private fun addTask(task: Task) {
+        val currentUser = mAuth.currentUser ?: return
+        task.userId = currentUser.uid
         GlobalScope.launch(Dispatchers.IO) {
-            // 1) Mevcut tüm görevleri alın (sıralı geliyor: isPinned DESC, sortOrder ASC)
-            val existing = taskDao.getAllTasks()
-
-            // 2) Yeni görevin sortOrder’ını listenin sonuna koy
-            //    Böylece pinned olsun ya da olmasın, en sona itelenecek
+            val existing = taskDao.getTasksByUserId(currentUser.uid)
             task.sortOrder = existing.size
 
-            // 3) Zaman çakışması kontrolü (varsa snackbar, yoksa ekle)
             if (task.time.isNotBlank() && task.time != "Saat") {
-                val conflict = taskDao.getTaskByTime(task.time)
+                val conflict = taskDao.getTaskByTimeAndUserId(task.time, currentUser.uid)
                 if (conflict != null) {
                     withContext(Dispatchers.Main) {
                         Snackbar.make(
@@ -192,7 +201,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // 4) DB’ye ekle ve UI’ı yenile
             taskDao.insertTask(task)
             withContext(Dispatchers.Main) {
                 loadTasks()

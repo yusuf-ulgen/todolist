@@ -8,7 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class], version = 4,exportSchema = false)
+    entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class], version = 5,exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun resetTimeDao(): ResetTimeDao
@@ -27,7 +27,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     // Gelişim aşamasında hızlıca:
                     .fallbackToDestructiveMigration()
-                    // Üretimde:
                     //.addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance

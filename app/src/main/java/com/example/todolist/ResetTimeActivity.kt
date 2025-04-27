@@ -4,9 +4,16 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.view.View
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.todolist.databinding.ActivityResetTimeBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -29,24 +36,29 @@ class ResetTimeActivity : AppCompatActivity() {
 
         binding.timePicker.setIs24HourView(true)
 
-        // 1) Var olan reset zamanını oku, UI’ya bas
+        val color = ContextCompat.getColor(this, R.color.creamOnBackground)
+
+        // Sistem ID’lerinden “hour” ve “minute” alanlarını bulup renk ata
+        listOf("hour", "minute").forEach { name ->
+            val id = Resources.getSystem().getIdentifier(name, "id", "android")
+            binding.timePicker.findViewById<TextView>(id)?.setTextColor(color)
+        }
+
         GlobalScope.launch(Dispatchers.IO) {
             val saved = resetTimeDao.getResetTime()
             withContext(Dispatchers.Main) {
                 saved?.let {
                     showSavedTime(it.resetHour, it.resetMinute)
-                    binding.timePicker.hour   = it.resetHour
+                    binding.timePicker.hour = it.resetHour
                     binding.timePicker.minute = it.resetMinute
                 }
             }
         }
 
-        // 2) Kaydet butonuna tıklanınca:
         binding.saveResetTimeButton.setOnClickListener {
-            val hour   = binding.timePicker.hour
+            val hour = binding.timePicker.hour
             val minute = binding.timePicker.minute
 
-            // 3) Veritabanına kaydet
             val resetTime = ResetTime(resetHour = hour, resetMinute = minute)
             GlobalScope.launch(Dispatchers.IO) {
                 resetTimeDao.deleteAll()
@@ -59,31 +71,39 @@ class ResetTimeActivity : AppCompatActivity() {
                     ).show()
                     showSavedTime(hour, minute)
 
-                    // 4) AlarmManager ile günlük reset alarmını kur
                     scheduleDailyResetAlarm(hour, minute)
                 }
             }
         }
     }
 
-    // Kaydedilen saati ekranda gösterir
     private fun showSavedTime(hour: Int, minute: Int) {
         val text = String.format("%02d:%02d", hour, minute)
         binding.savedResetTimeValue.text = text
     }
 
-    // AlarmManager’ı kuran yardımcı fonksiyon
-    @Suppress("ScheduleExactAlarm")
     private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Toast.makeText(
+                    this,
+                    "Lütfen uygulamaya alarm kurma izni verin.",
+                    Toast.LENGTH_LONG
+                ).show()
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                startActivity(intent)
+                return
+            }
+        }
+
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent       = Intent(this, ResetReceiver::class.java)
-        val pending      = PendingIntent.getBroadcast(
+        val intent = Intent(this, ResetReceiver::class.java)
+        val pending = PendingIntent.getBroadcast(
             this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Bugünkü reset zamanını Calendar ile hesapla;
-        // geçmişse bir gün ekle
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, resetHour)
             set(Calendar.MINUTE, resetMinute)
@@ -93,7 +113,6 @@ class ResetTimeActivity : AppCompatActivity() {
             }
         }
 
-        // Tam saatte tetikle, uyku modunda bile
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             cal.timeInMillis,
