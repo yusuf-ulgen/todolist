@@ -18,6 +18,12 @@
         android:theme="@style/Theme.Todolist"
         tools:targetApi="31">
         <activity
+            android:name=".AdminFeedbackActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FeedbackListActivity"
+            android:exported="false" />
+        <activity
             android:name=".DayDetailActivity"
             android:exported="false" />
         <activity
@@ -29,7 +35,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.Todolist">
+            android:theme="@style/Theme.Todolist"
+            android:windowSoftInputMode="adjustResize|stateHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -50,7 +57,7 @@
             android:exported="false" />
 
         <receiver android:name=".NotificationReceiver" />
-        <receiver android:name=".ResetReceiver"/>
+        <receiver android:name=".ResetReceiver" />
     </application>
 
 </manifest>

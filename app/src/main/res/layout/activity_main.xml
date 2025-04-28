@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
-    android:background="@color/white"
+    android:background="@color/creamBackground"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -20,6 +20,7 @@
             android:layout_height="?attr/actionBarSize"
             app:backgroundTint="@color/creamPrimary"
             app:titleTextColor="@color/creamOnPrimary"/>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <include
@@ -49,4 +50,5 @@
         android:textStyle="bold"
         android:textColor="@color/creamOnBackground"
         tools:text="Bugünün görevleri 2/7"/>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

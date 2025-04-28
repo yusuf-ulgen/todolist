@@ -2,8 +2,10 @@ package com.example.todolist
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todolist.databinding.ActivitySettingsBinding
+import com.google.firebase.auth.FirebaseAuth
 
 class Settings : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
@@ -36,6 +38,20 @@ class Settings : AppCompatActivity() {
         binding.changePasswordButton.setOnClickListener {
             val intent = Intent(this, ChangePasswordActivity::class.java)
             startActivity(intent)
+        }
+
+        // Admin Feedback Tıklama İşlemi
+        binding.feedbackListButton.setOnClickListener {
+            val seenUid  = FirebaseAuth.getInstance().currentUser?.uid
+            val adminUid = "NvKPJHa85rfVgFId0r46FcKGq5u1"
+
+            if (seenUid != adminUid) {
+                // Sadece bu mesaj görünsün:
+                Toast.makeText(this, "Yetkiniz yok.", Toast.LENGTH_SHORT).show()
+            } else {
+                // Admin ise ekrana geçiş:
+                startActivity(Intent(this, AdminFeedbackActivity::class.java))
+            }
         }
     }
 }

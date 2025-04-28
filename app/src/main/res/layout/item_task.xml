@@ -20,7 +20,7 @@
         app:layout_constraintWidth_percent="0.10"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- Checkbox -->
     <CheckBox
@@ -31,7 +31,7 @@
         app:layout_constraintWidth_percent="0.10"
         app:layout_constraintStart_toEndOf="@id/taskNumber"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- Görev Metni ve Pin Ikonu -->
     <FrameLayout
@@ -54,9 +54,11 @@
             android:textSize="16sp"
             android:backgroundTint="@color/creamPrimaryVariant"
             android:padding="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:scrollbars="vertical"/>
+            android:scrollHorizontally="true"
+            android:singleLine="true"
+            android:imeOptions="actionDone"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
         <ImageView
             android:id="@+id/pinIcon"
@@ -83,6 +85,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintWidth_percent="0.25"/>
+        app:layout_constraintWidth_percent="0.25" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

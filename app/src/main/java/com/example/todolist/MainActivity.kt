@@ -3,7 +3,6 @@ package com.example.todolist
 import android.app.AlarmManager
 import android.app.AlertDialog
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +20,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +46,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
+        )
+
         // Initialize view binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)  // Önce binding ile setContentView'i yapın
@@ -51,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         // Hide action bar
         supportActionBar?.hide()
 
-        var mAuth = FirebaseAuth.getInstance()
+        val mAuth = FirebaseAuth.getInstance()
 
         // Firebase kullanıcı oturumu kontrolü
         val user = mAuth.currentUser
@@ -209,10 +216,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateTaskStats() {
-        // MainActivity.tasks yerine adapter.getTasks() kullanıyoruz
-        val current = adapter.getTasks()
-        val total = current.size
-        val done  = current.count { it.isChecked }
+        val total = adapter.getTasks().size
+        val done  = adapter.getTasks().count { it.isChecked }
         binding.taskStatsTextView.text = "Bugünün görevleri $done/$total"
     }
 
@@ -284,11 +289,25 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Geri Bildirim")
             .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
             .setPositiveButton("Gönder") { _, _ ->
-                Snackbar.make(
-                    binding.root,
-                    "Geri bildiriminiz gönderildi!",
-                    Snackbar.LENGTH_SHORT
-                ).show()
+                // Firestore referansı
+                val db = Firebase.firestore
+                // Belge verisi
+                val data = mapOf(
+                    "title"     to title,
+                    "message"   to message,
+                    "timestamp" to System.currentTimeMillis(),
+                    "userId"    to FirebaseAuth.getInstance().currentUser?.uid,
+                    "userEmail" to FirebaseAuth.getInstance().currentUser?.email
+                )
+                // yaz
+                db.collection("feedbacks")
+                    .add(data)
+                    .addOnSuccessListener {
+                        Snackbar.make(binding.root, "Geri bildiriminiz gönderildi!", Snackbar.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
+                    }
             }
             .setNegativeButton("İptal", null)
             .show()
@@ -352,7 +371,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
 
         // 13+ için izin kontrolü
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

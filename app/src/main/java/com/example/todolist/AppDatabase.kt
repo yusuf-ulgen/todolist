@@ -7,8 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(
-    entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class], version = 5,exportSchema = false)
+@Database(entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class],version = 5,exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun resetTimeDao(): ResetTimeDao
