@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">todolist</string>
+    <string name="app_name">ToDoList</string>
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -7,4 +7,5 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="default_web_client_id">project-603277030577</string>
+    <string name="pin_icon">Pin simgesi</string>
 </resources>

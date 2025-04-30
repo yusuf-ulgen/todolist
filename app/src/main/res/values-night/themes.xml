@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- … diğer renk ve item’lar … -->
+        <item name="pinIcon">@drawable/pin_night</item>
+    </style>
+</resources>

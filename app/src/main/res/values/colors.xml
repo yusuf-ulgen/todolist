@@ -15,4 +15,9 @@
     <color name="creamPrimaryVariant">#B9976B</color>
     <color name="creamOnBackground">#3E2723</color>
     <color name="creamOnPrimary">#212121</color>
+
+    <!-- Task metni (light theme’de koyu kahve) -->
+    <color name="task_text_default">#3E2723</color>
+    <!-- Task işaretlendiğinde (light theme’de strike-through zaten uyguluyorsun, renk hafif soluk) -->
+    <color name="task_text_checked">#A1887F</color>
 </resources>

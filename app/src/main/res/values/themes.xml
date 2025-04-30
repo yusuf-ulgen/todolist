@@ -24,6 +24,8 @@
 
         <!-- Genel varsayılan metin rengi -->
         <item name="android:textColorPrimary">@color/creamOnBackground</item>
+
+        <item name="pinIcon">@drawable/pin_light</item>
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">

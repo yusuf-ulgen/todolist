@@ -10,12 +10,12 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.PopupMenu
 import android.graphics.Paint
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 
 class TaskAdapter(
@@ -42,24 +42,45 @@ class TaskAdapter(
         b.taskEditText.setText(task.content)
         b.timeTextView.text = task.time.takeIf { it.isNotBlank() && it != "Saat" } ?: "Saat"
 
-        // 2) isChecked durumu ve üstünü çizme
+        // 2) isChecked durumu, renk ve üstünü çizme
         b.taskCheckBox.setOnCheckedChangeListener(null)
         b.taskCheckBox.isChecked = task.isChecked
-        if (task.isChecked) {
-            b.taskEditText.paintFlags = b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-        } else {
-            b.taskEditText.paintFlags = b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
-        }
+
+// Hem metin rengini hem de strike‐through’u başlangıçta ayarla
+        val initColorRes = if (task.isChecked)
+            R.color.task_text_checked
+        else
+            R.color.task_text_default
+
+        b.taskEditText.setTextColor(ContextCompat.getColor(ctx, initColorRes))
+        b.taskEditText.paintFlags = if (task.isChecked)
+            b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+        else
+            b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+
         b.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
             task.isChecked = isChecked
-            GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
+            GlobalScope.launch(Dispatchers.IO) {
+                taskDao.updateTask(task)
+            }
             onStatsChanged()
+
+            // Metin rengini güncelle
+            val colorRes = if (isChecked)
+                R.color.task_text_checked
+            else
+                R.color.task_text_default
+
+            b.taskEditText.setTextColor(ContextCompat.getColor(ctx, colorRes))
+
+            // Üstünü çiz / çizgiyi kaldır
             if (isChecked) {
                 b.taskEditText.paintFlags = b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             } else {
                 b.taskEditText.paintFlags = b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
         }
+
 
         // 3) isPinned durumu
         b.pinIcon.visibility = if (task.isPinned) View.VISIBLE else View.GONE

@@ -8,4 +8,9 @@
     <!-- Üzerine yazı koyu moda uygun açık renk -->
     <color name="creamOnBackground">#FFFFFF</color>
     <color name="creamOnPrimary">#FFFFFF</color>
+
+    <!-- Task metni (dark theme’de hafif gri) -->
+    <color name="task_text_default">#E0E0E0</color>
+    <!-- Task işaretlendiğinde biraz daha koyu/soluk gri -->
+    <color name="task_text_checked">#757575</color>
 </resources>
