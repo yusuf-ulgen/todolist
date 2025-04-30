@@ -19,7 +19,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:backgroundTint="@color/creamPrimary"
-            app:titleTextColor="@color/creamOnPrimary"/>
+            app:subtitleTextColor="@color/creamOnPrimary"
+            app:subtitleTextAppearance="@style/SubtitleLarge"
+            app:subtitleCentered="true"/>
 
     </com.google.android.material.appbar.AppBarLayout>
 

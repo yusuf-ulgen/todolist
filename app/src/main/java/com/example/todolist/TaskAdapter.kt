@@ -189,14 +189,17 @@ class TaskAdapter(
     }
 
     fun deleteItem(position: Int) {
-        val taskToDelete = tasks[position]
+        // 1) Hemen UI’dan çıkar
+        val removed = tasks.removeAt(position)
+        notifyItemRemoved(position)
+        // İndeksler değiştiği için kalanları da güncelle
+        notifyItemRangeChanged(position, tasks.size - position)
+        // İstatistikleri yenile
+        onStatsChanged()
+
+        // 2) Arka planda DB’den sil
         GlobalScope.launch(Dispatchers.IO) {
-            taskDao.deleteTask(taskToDelete)
-            withContext(Dispatchers.Main) {
-                tasks.removeAt(position)
-                notifyItemRemoved(position)
-                onStatsChanged()
-            }
+            taskDao.deleteTask(removed)
         }
     }
 

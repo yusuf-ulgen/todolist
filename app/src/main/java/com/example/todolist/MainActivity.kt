@@ -55,8 +55,12 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)  // Önce binding ile setContentView'i yapın
 
-        // Hide action bar
-        supportActionBar?.hide()
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.apply {
+            title = ""
+            subtitle = "Bugünün görevleri 0/0"
+            setDisplayShowTitleEnabled(true)
+        }
 
         val mAuth = FirebaseAuth.getInstance()
 
@@ -70,9 +74,6 @@ class MainActivity : AppCompatActivity() {
 
         // ThemeHelper ve diğer işlemler
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
-
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
 
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
@@ -90,6 +91,10 @@ class MainActivity : AppCompatActivity() {
         val recyclerView = binding.contentMain.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
+
+        // CHANGE animasyonlarını kapat—boşluk kalma riskini iyice ortadan kaldırır
+        (recyclerView.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)
+            ?.supportsChangeAnimations = false
 
         val touchCallback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
@@ -125,7 +130,10 @@ class MainActivity : AppCompatActivity() {
             ) {
                 super.clearView(recyclerView, viewHolder)
                 // Drag&Drop bittiğinde tüm numaraları yenile
-                adapter.notifyItemRangeChanged(0, adapter.itemCount)
+                recyclerView.post {
+                    // Tüm numaraları yenile
+                    adapter.notifyItemRangeChanged(0, adapter.itemCount)
+                }
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -175,13 +183,19 @@ class MainActivity : AppCompatActivity() {
 
     private val mAuth = FirebaseAuth.getInstance()
 
-    private fun loadTasks() {
+    private fun loadTasks(scrollToEnd: Boolean = false) {
         val currentUser = mAuth.currentUser ?: return
         GlobalScope.launch(Dispatchers.IO) {
             val taskList = taskDao.getTasksByUserId(currentUser.uid)
             withContext(Dispatchers.Main) {
                 tasks = taskList
                 adapter.setTasks(tasks)
+
+                if (scrollToEnd && tasks.isNotEmpty()) {
+                    binding.contentMain.todoRecyclerView
+                        .scrollToPosition(tasks.size - 1)
+                }
+
                 updateTaskStats()
             }
         }
@@ -210,7 +224,7 @@ class MainActivity : AppCompatActivity() {
 
             taskDao.insertTask(task)
             withContext(Dispatchers.Main) {
-                loadTasks()
+                loadTasks(scrollToEnd = true)
             }
         }
     }
@@ -218,7 +232,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateTaskStats() {
         val total = adapter.getTasks().size
         val done  = adapter.getTasks().count { it.isChecked }
-        binding.taskStatsTextView.text = "Bugünün görevleri $done/$total"
+
+        supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

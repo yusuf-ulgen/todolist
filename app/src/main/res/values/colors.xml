@@ -10,10 +10,9 @@
     <color name="gray">#9E9E9E</color>
 
     <!-- Cream teması renkleri -->
-    <color name="creamBackground">#FFF8E1</color>          <!-- Yumuşak krem arka plan -->
-    <color name="creamPrimary">#D2B48C</color>             <!-- Ana krem/ten rengi -->
-    <color name="creamPrimaryVariant">#B9976B</color>      <!-- Koyu krem ton -->
-    <color name="creamOnBackground">#3E2723</color>        <!-- Koyu kahve metin -->
-    <color name="creamOnPrimary">#212121</color>           <!-- Ana metin rengi -->
-
+    <color name="creamBackground">#FFF8E1</color>
+    <color name="creamPrimary">#D2B48C</color>
+    <color name="creamPrimaryVariant">#B9976B</color>
+    <color name="creamOnBackground">#3E2723</color>
+    <color name="creamOnPrimary">#212121</color>
 </resources>

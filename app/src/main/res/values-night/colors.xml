@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Gece modu için arka plan: çok koyu gri/siyah -->
+    <color name="creamBackground">#2C2C2C</color>
+    <!-- Ana renk olarak biraz daha koyu krem/ten -->
+    <color name="creamPrimary">#A1887F</color>
+    <color name="creamPrimaryVariant">#6D4C41</color>
+    <!-- Üzerine yazı koyu moda uygun açık renk -->
+    <color name="creamOnBackground">#FFFFFF</color>
+    <color name="creamOnPrimary">#FFFFFF</color>
+</resources>
