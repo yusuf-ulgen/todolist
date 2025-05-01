@@ -8,8 +8,6 @@ import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.View
-import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -23,87 +21,90 @@ import java.util.*
 
 class ResetTimeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityResetTimeBinding
-    private lateinit var db: AppDatabase
-    private lateinit var resetTimeDao: ResetTimeDao
+    private val resetTimeDao by lazy {
+        AppDatabase.getDatabase(applicationContext).resetTimeDao()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityResetTimeBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        db = AppDatabase.getDatabase(applicationContext)
-        resetTimeDao = db.resetTimeDao()
-
+        // 1) TimePicker'ı 24 saat formatına al ve rengini ayarla
         binding.timePicker.setIs24HourView(true)
-
         val color = ContextCompat.getColor(this, R.color.creamOnBackground)
-
-        // Sistem ID’lerinden “hour” ve “minute” alanlarını bulup renk ata
         listOf("hour", "minute").forEach { name ->
             val id = Resources.getSystem().getIdentifier(name, "id", "android")
-            binding.timePicker.findViewById<TextView>(id)?.setTextColor(color)
+            binding.timePicker.findViewById<TextView>(id)
+                ?.setTextColor(color)
         }
 
+        // 2) Daha önce kaydedilen saati oku ve göster
         GlobalScope.launch(Dispatchers.IO) {
-            val saved = resetTimeDao.getResetTime()
-            withContext(Dispatchers.Main) {
-                saved?.let {
-                    showSavedTime(it.resetHour, it.resetMinute)
-                    binding.timePicker.hour = it.resetHour
-                    binding.timePicker.minute = it.resetMinute
+            resetTimeDao.getResetTime()?.let { saved ->
+                withContext(Dispatchers.Main) {
+                    showSavedTime(saved.resetHour, saved.resetMinute)
+                    binding.timePicker.hour   = saved.resetHour
+                    binding.timePicker.minute = saved.resetMinute
                 }
             }
         }
 
+        // 3) Kaydet butonu
         binding.saveResetTimeButton.setOnClickListener {
-            val hour = binding.timePicker.hour
+            val hour   = binding.timePicker.hour
             val minute = binding.timePicker.minute
 
-            val resetTime = ResetTime(resetHour = hour, resetMinute = minute)
+            // a) Room'a upsert et
             GlobalScope.launch(Dispatchers.IO) {
-                resetTimeDao.deleteAll()
-                resetTimeDao.insertResetTime(resetTime)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@ResetTimeActivity,
-                        "Reset Saati Kaydedildi",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    showSavedTime(hour, minute)
-
-                    scheduleDailyResetAlarm(hour, minute)
-                }
+                resetTimeDao.upsert( ResetTime(resetHour = hour, resetMinute = minute) )
             }
+
+            // b) Alarm'ı (yeniden) planla
+            scheduleDailyResetAlarm(hour, minute)
+
+            // c) Kullanıcıya bilgi ver
+            Toast.makeText(
+                this,
+                "Reset saati kaydedildi: %02d:%02d".format(hour, minute),
+                Toast.LENGTH_SHORT
+            ).show()
+            showSavedTime(hour, minute)
         }
     }
 
     private fun showSavedTime(hour: Int, minute: Int) {
-        val text = String.format("%02d:%02d", hour, minute)
-        binding.savedResetTimeValue.text = text
+        binding.savedResetTimeValue.text = "%02d:%02d".format(hour, minute)
     }
 
     private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
+        // Android 12+ exact alarm izni
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-            if (!alarmManager.canScheduleExactAlarms()) {
+            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!am.canScheduleExactAlarms()) {
                 Toast.makeText(
                     this,
-                    "Lütfen uygulamaya alarm kurma izni verin.",
+                    "Uygulamaya alarm kurma izni vermelisiniz.",
                     Toast.LENGTH_LONG
                 ).show()
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                startActivity(intent)
+                startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                )
                 return
             }
         }
 
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        // AlarmManager ve PendingIntent oluştur
+        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, ResetReceiver::class.java)
-        val pending = PendingIntent.getBroadcast(
-            this, 0, intent,
+        val pi = PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Hedef zamanı hesapla
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, resetHour)
             set(Calendar.MINUTE, resetMinute)
@@ -113,10 +114,11 @@ class ResetTimeActivity : AppCompatActivity() {
             }
         }
 
-        alarmManager.setExactAndAllowWhileIdle(
+        // Alarmı eksiksiz planla
+        am.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             cal.timeInMillis,
-            pending
+            pi
         )
     }
 }

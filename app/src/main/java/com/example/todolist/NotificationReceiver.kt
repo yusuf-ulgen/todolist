@@ -1,39 +1,40 @@
 package com.example.todolist
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 
 class NotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val title = intent.getStringExtra("title") ?: "Görev Zamanı!"
-        val taskId = intent.getIntExtra("id", 0)
+        // 1) taskId’yi Int olarak alın
+        val taskId = intent.getIntExtra("taskId", 0)
+        val content = intent.getStringExtra("taskContent") ?: "Görev zamanı!"
 
-        // DEBUG LOG
-        android.util.Log.d("BILDIRIM", "Bildirim alındı! Title: $title, ID: $taskId")
-
-        val channelId = "todo_channel"
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
+        // 2) Bildirim kanalı (Android O+ için)
+        val channelId = "task_channel"
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            val chan = NotificationChannel(
                 channelId,
-                "Görev Bildirimleri",
-                NotificationManager.IMPORTANCE_HIGH
+                "Görev Hatırlatmaları",
+                NotificationManager.IMPORTANCE_DEFAULT
             )
-            manager.createNotificationChannel(channel)
+            nm.createNotificationChannel(chan)
         }
 
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("To-Do List")
-            .setContentText(title)
+        // 3) Bildirim inşa et (MUST have smallIcon)
+        val notif = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.pin_night)  // ← Öylesine görsel
+            .setContentTitle("Görev Zamanı")
+            .setContentText(content)
             .setAutoCancel(true)
+            .build()
 
-        manager.notify(taskId, builder.build())
+        // 4) Notify
+        nm.notify(taskId, notif)
     }
 }

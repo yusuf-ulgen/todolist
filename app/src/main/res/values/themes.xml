@@ -7,6 +7,9 @@
         <item name="colorPrimary">@color/creamPrimary</item>
         <item name="colorPrimaryVariant">@color/creamPrimaryVariant</item>
         <item name="colorOnPrimary">@color/creamOnPrimary</item>
+        <item name="android:colorBackground">@color/creamBackground</item>
+        <item name="colorOnBackground">@color/creamOnBackground</item>
+
 
         <!-- Secondary renkler (Snackbar, switch thumb vb) -->
         <item name="colorSecondary">@color/creamPrimary</item>

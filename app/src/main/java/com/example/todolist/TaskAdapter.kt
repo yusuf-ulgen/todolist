@@ -3,6 +3,7 @@ package com.example.todolist
 import android.app.AlertDialog
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.pm.PackageManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.PopupMenu
 import android.graphics.Paint
+import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
@@ -22,7 +24,8 @@ class TaskAdapter(
     private var tasks: MutableList<Task>,
     private val addTaskCallback: (Task) -> Unit,
     private val taskDao: TaskDao,
-    var onStatsChanged: () -> Unit
+    var onStatsChanged: () -> Unit,
+    private val onTimeClick: (task: Task, binding: ItemTaskBinding) -> Unit
 ) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
 
     inner class TaskViewHolder(val binding: ItemTaskBinding) : RecyclerView.ViewHolder(binding.root)
@@ -46,7 +49,7 @@ class TaskAdapter(
         b.taskCheckBox.setOnCheckedChangeListener(null)
         b.taskCheckBox.isChecked = task.isChecked
 
-// Hem metin rengini hem de strike‐through’u başlangıçta ayarla
+        // Hem metin rengini hem de strike‐through’u başlangıçta ayarla
         val initColorRes = if (task.isChecked)
             R.color.task_text_checked
         else
@@ -106,13 +109,7 @@ class TaskAdapter(
 
         // 7) Saat seçici
         b.timeTextView.setOnClickListener {
-            val cal = Calendar.getInstance()
-            TimePickerDialog(ctx, { _, h, m ->
-                val timeText = String.format("%02d:%02d", h, m)
-                b.timeTextView.text = timeText
-                task.time = timeText
-                GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
-            }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true).show()
+            onTimeClick(task, b)
         }
 
         // 8) Görevi kaydet (IME action) + klavyeyi gizle + focus temizleme

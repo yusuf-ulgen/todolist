@@ -6,10 +6,10 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
-interface ResetTimeDao {
+interface NotificationPrefDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(resetTime: ResetTime)
+    suspend fun upsert(pref: NotificationPref)
 
-    @Query("SELECT * FROM reset_time WHERE id = 0 LIMIT 1")
-    suspend fun getResetTime(): ResetTime?
+    @Query("SELECT * FROM notification_pref LIMIT 1")
+    suspend fun getPref(): NotificationPref?
 }

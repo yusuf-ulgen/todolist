@@ -1,6 +1,16 @@
 <resources>
     <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- … diğer renk ve item’lar … -->
+
         <item name="pinIcon">@drawable/pin_night</item>
+        <!-- Burada android: öneki ekliyoruz -->
+        <item name="android:colorBackground">@color/creamBackground</item>
+        <item name="android:windowBackground">@color/creamBackground</item>
+        <item name="android:statusBarColor">@color/creamPrimaryVariant</item>
+        <item name="android:navigationBarColor">@color/creamBackground</item>
+
+        <!-- MaterialComponents için surface ve on* attr’lerini android: değil attr namespace’inde bırakabilirsiniz -->
+        <item name="colorSurface">@color/creamBackground</item>
+        <item name="colorOnBackground">@color/creamOnBackground</item>
+        <item name="colorOnSurface">@color/creamOnBackground</item>
     </style>
 </resources>

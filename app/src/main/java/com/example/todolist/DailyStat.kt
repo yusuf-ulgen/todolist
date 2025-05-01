@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "daily_stats")
 data class DailyStat(
-    @PrimaryKey val date: String,
-    @ColumnInfo val completed: Int,
-    @ColumnInfo val total: Int
+    @PrimaryKey val date: String,       // yyyy-MM-dd
+    val completed: Int,
+    val total: Int
 )

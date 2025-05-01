@@ -20,4 +20,10 @@
     <color name="task_text_default">#3E2723</color>
     <!-- Task işaretlendiğinde (light theme’de strike-through zaten uyguluyorsun, renk hafif soluk) -->
     <color name="task_text_checked">#A1887F</color>
+
+    <color name="stat_text">#3E2723</color>
+    <color name="stat_bg_light">#FFF8E1</color>      <!-- açık modda arka plan -->
+    <color name="stat_bg_dark">#121212</color>       <!-- koyu modda arka plan -->
+    <color name="stat_text_light">#3E2723</color>    <!-- açık modda metin -->
+    <color name="stat_text_dark">#EEEEEE</color>     <!-- koyu modda metin -->
 </resources>

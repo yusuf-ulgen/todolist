@@ -54,7 +54,9 @@
             android:exported="false" />
 
         <receiver android:name=".NotificationReceiver" />
-        <receiver android:name=".ResetReceiver" />
+        <receiver
+            android:name=".ResetReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

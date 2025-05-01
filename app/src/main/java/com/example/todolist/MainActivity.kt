@@ -3,7 +3,9 @@ package com.example.todolist
 import android.app.AlarmManager
 import android.app.AlertDialog
 import android.app.PendingIntent
+import android.app.TimePickerDialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -12,12 +14,17 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
 import android.widget.EditText
-import android.widget.Toast
+import android.content.Context
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.example.todolist.NotificationPreferenceRepository
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
+import com.example.todolist.databinding.ItemTaskBinding
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
@@ -29,6 +36,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import android.content.Context.ALARM_SERVICE
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,6 +45,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private lateinit var taskDao: TaskDao
     private lateinit var resetTimeDao: ResetTimeDao
+    private lateinit var requestNotifPermission: ActivityResultLauncher<String>
+    private lateinit var notifPrefRepo: NotificationPreferenceRepository
     private var tasks: List<Task> = mutableListOf()
 
     // Bu flag, drag/swipe tamamlanmadan yenisini engelliyor
@@ -78,14 +88,54 @@ class MainActivity : AppCompatActivity() {
         db = AppDatabase.getDatabase(applicationContext)
         taskDao = db.taskDao()
         resetTimeDao = db.resetTimeDao()
-        adapter = TaskAdapter(
-            mutableListOf(),    // 1. param: başlangıç listesi
-            ::addTask,          // 2. param: addTask callback
-            taskDao,            // 3. param: TaskDao
-            { updateTaskStats() } // 4. param: onStatsChanged callback
-        )
 
-        checkAndPerformReset()
+        adapter = TaskAdapter(
+            mutableListOf(),
+            ::addTask,
+            taskDao,
+            { updateTaskStats() },
+            onTimeClick = { task, b ->
+
+                // önce arka planda preference’ı al
+                GlobalScope.launch(Dispatchers.IO) {
+                    val kind = notifPrefRepo.loadKind()
+
+                    withContext(Dispatchers.Main) {
+                        fun proceed() {
+                            // Android13+ izin kontrolü
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    android.Manifest.permission.POST_NOTIFICATIONS
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                requestNotifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            // sonra time picker’ı göster
+                            showTimePickerAndSave(task, b)
+                        }
+
+                        if (kind < 0) {
+                            // daha önce hiç seçilmedi, diyalogu göster
+                            showNotificationChoice { selectedKind ->
+                                // 1) seçimi kaydet
+                                GlobalScope.launch(Dispatchers.IO) {
+                                    notifPrefRepo.saveKind(selectedKind)
+                                }
+                                // 2) devam et
+                                proceed()
+                            }
+                        } else {
+                            // zaten seçim var, direkt devam et
+                            proceed()
+                        }
+                    }
+                }
+
+            }
+        )
+        binding.contentMain.todoRecyclerView.adapter = adapter
+
         loadTasks()
 
         val recyclerView = binding.contentMain.todoRecyclerView
@@ -168,6 +218,37 @@ class MainActivity : AppCompatActivity() {
             )
             addTask(newTask)
         }
+
+        val db = AppDatabase.getDatabase(this)
+        notifPrefRepo = NotificationPreferenceRepository(db.notificationPrefDao())
+
+        // 1.c) İzin launcher’ını register et
+        requestNotifPermission = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (!granted) {
+                Snackbar.make(binding.root,
+                    "Bildirim izni reddedildi",
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun showNotificationChoice(onChosen: (kind: Int) -> Unit) {
+        val options = arrayOf(
+            "Her görev için bildirim gönder",
+            "Sadece pinlilere gönder",
+            "Hiçbirine gönderme"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Bildirim tercihinizi seçin")
+            .setSingleChoiceItems(options, /*defaultIndex=*/ -1) { dialog, which ->
+                onChosen(which)
+                dialog.dismiss()
+            }
+            .setNegativeButton("İptal", null)
+            .show()
     }
 
     private fun scheduleMoveReset() {
@@ -235,6 +316,31 @@ class MainActivity : AppCompatActivity() {
 
         supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
     }
+
+    fun scheduleDailyResetAlarm(context: Context, resetHour: Int, resetMinute: Int) {
+        val intent = Intent(context, ResetReceiver::class.java)
+        val pi = PendingIntent.getBroadcast(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, resetHour)
+            set(Calendar.MINUTE, resetMinute)
+            set(Calendar.SECOND, 0)
+            if (before(Calendar.getInstance())) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            cal.timeInMillis,
+            pi
+        )
+    }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
@@ -385,35 +491,76 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+    private fun cancelTaskNotification(task: Task) {
+        val intent = Intent(this, NotificationReceiver::class.java)
+        val pi = PendingIntent.getBroadcast(
+            this,
+            task.id.toInt(),
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        pi?.let {
+            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            am.cancel(it)
+            it.cancel()
+        }
+    }
 
-        // 13+ için izin kontrolü
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                // Kullanıcıyı Ayarlar > Alarmlar kısmına yönlendirebilirsiniz
-                Toast.makeText(this, "Exact alarm izni yok", Toast.LENGTH_SHORT).show()
-                return
+    private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            if (before(Calendar.getInstance())) {
+                add(Calendar.DAY_OF_YEAR, 1)
             }
         }
 
-        val intent  = Intent(this, ResetReceiver::class.java)
-        val pending = PendingIntent.getBroadcast(
-            this, 0, intent,
+        val intent = Intent(this, NotificationReceiver::class.java).apply {
+            putExtra("taskId", task.id.toInt())      // Int olarak saklıyoruz
+            putExtra("taskContent", task.content)
+        }
+
+        val pi = PendingIntent.getBroadcast(
+            this,
+            task.id.toInt(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, resetHour)
-            set(Calendar.MINUTE, resetMinute)
-            set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
-        }
-
-        alarmManager.setExactAndAllowWhileIdle(
+        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             cal.timeInMillis,
-            pending
+            pi
         )
+    }
+
+    private fun showTimePickerAndSave(task: Task, b: ItemTaskBinding) {
+        val calNow = Calendar.getInstance()
+        TimePickerDialog(
+            this,
+            { _, hourOfDay, minute ->
+                // 1) TextView’i güncelle
+                val timeText = "%02d:%02d".format(hourOfDay, minute)
+                b.timeTextView.text = timeText
+                task.time = timeText
+
+                // 2) Veritabanına kaydet
+                GlobalScope.launch(Dispatchers.IO) {
+                    taskDao.updateTask(task)
+                }
+
+                // 3) Mevcut alarm varsa iptal et
+                cancelTaskNotification(task)
+
+                // 4) Yeni saatte alarmı planla
+                scheduleTaskNotification(task, hourOfDay, minute)
+
+            },
+            calNow.get(Calendar.HOUR_OF_DAY),
+            calNow.get(Calendar.MINUTE),
+            true
+        ).show()
     }
 }
