@@ -5,8 +5,8 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:background="?android:attr/colorBackground">
 
     <!-- Bütün formu saracak ve ortalayacak container -->
     <LinearLayout
@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:text="Kullanıcı Maili:"
                 android:textSize="16sp"
-                android:textColor="@color/creamOnBackground"/>
+                android:textColor="?attr/colorOnBackground"/>
 
             <EditText
                 android:id="@+id/mail_id"
@@ -44,9 +44,9 @@
                 android:layout_marginStart="8dp"
                 android:hint="Mailinizi giriniz"
                 android:inputType="textEmailAddress"
-                android:backgroundTint="@color/creamPrimaryVariant"
-                android:textColor="@color/creamOnBackground"
-                android:textColorHint="@color/creamOnBackground"/>
+                android:backgroundTint="?attr/colorPrimaryVariant"
+                android:textColor="?attr/colorOnBackground"
+                android:textColorHint="?attr/colorOnBackground"/>
         </LinearLayout>
 
         <!-- Şifre Satırı -->
@@ -63,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:text="Şifre:"
                 android:textSize="16sp"
-                android:textColor="@color/creamOnBackground"/>
+                android:textColor="?attr/colorOnBackground"/>
 
             <EditText
                 android:id="@+id/sifre_id"
@@ -73,9 +73,9 @@
                 android:layout_marginStart="8dp"
                 android:hint="Şifrenizi giriniz"
                 android:inputType="textPassword"
-                android:backgroundTint="@color/creamPrimaryVariant"
-                android:textColor="@color/creamOnBackground"
-                android:textColorHint="@color/creamOnBackground"/>
+                android:backgroundTint="?attr/colorPrimaryVariant"
+                android:textColor="?attr/colorOnBackground"
+                android:textColorHint="?attr/colorOnBackground"/>
         </LinearLayout>
 
         <!-- Giriş ve Kaydol Butonları -->
@@ -92,8 +92,8 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="Giriş Yap"
-                android:backgroundTint="@color/creamPrimary"
-                android:textColor="@color/creamOnPrimary"/>
+                android:backgroundTint="?attr/colorPrimary"
+                android:textColor="?attr/colorOnPrimary"/>
 
             <Button
                 android:id="@+id/kaydet_id"
@@ -102,8 +102,8 @@
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
                 android:text="Kaydol"
-                android:backgroundTint="@color/creamPrimaryVariant"
-                android:textColor="@color/creamOnPrimary"/>
+                android:backgroundTint="?attr/colorPrimaryVariant"
+                android:textColor="?attr/colorOnPrimary"/>
         </LinearLayout>
 
         <!-- Google ile Giriş Yap Butonu -->
@@ -117,10 +117,12 @@
             app:iconTint="@null"
             app:iconGravity="textStart"
             app:iconPadding="12dp"
+            app:iconSize="24dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/creamOnBackground"
-            android:backgroundTint="@color/creamBackground"
-            android:textColor="@color/creamOnBackground"/>
+            app:strokeColor="?attr/colorOnBackground"
+            android:backgroundTint="@android:color/transparent"
+            android:textColor="?attr/colorOnBackground"/>
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

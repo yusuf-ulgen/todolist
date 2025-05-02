@@ -36,7 +36,17 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-import android.content.Context.ALARM_SERVICE
+import android.graphics.Color
+import android.view.View
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.core.models.Shape
+import nl.dionsegijn.konfetti.core.models.Size
+import nl.dionsegijn.konfetti.xml.KonfettiView
+import java.util.concurrent.TimeUnit
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -315,7 +325,28 @@ class MainActivity : AppCompatActivity() {
         val done  = adapter.getTasks().count { it.isChecked }
 
         supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
+
+        if (total > 0 && done == total) {
+            binding.contentMain.konfettiView.visibility = View.VISIBLE
+
+            val party = Party(
+                colors = listOf(Color.YELLOW, Color.MAGENTA, Color.GREEN),
+                shapes = listOf(Shape.Circle, Shape.Square),
+                size = listOf(Size(12)),
+                position = Position.Relative(0.5, 0.5),
+                emitter = Emitter(duration = 1, TimeUnit.SECONDS).max(200)
+            )
+
+            // start the confetti
+            binding.contentMain.konfettiView.start(party)
+
+            // hide again after 5s
+            Handler(Looper.getMainLooper()).postDelayed({
+                binding.contentMain.konfettiView.visibility = View.GONE
+            }, 5_000)
+        }
     }
+
 
     fun scheduleDailyResetAlarm(context: Context, resetHour: Int, resetMinute: Int) {
         val intent = Intent(context, ResetReceiver::class.java)

@@ -10,11 +10,11 @@
         <item name="android:colorBackground">@color/creamBackground</item>
         <item name="colorOnBackground">@color/creamOnBackground</item>
 
-
         <!-- Secondary renkler (Snackbar, switch thumb vb) -->
         <item name="colorSecondary">@color/creamPrimary</item>
         <item name="colorSecondaryVariant">@color/creamPrimaryVariant</item>
         <item name="colorOnSecondary">@color/creamOnPrimary</item>
+        <!-- Accent olarak da artık aqua #00BFA5 kullanılacak -->
 
         <!-- Uygulama arka planı ve üzerine yazı -->
         <item name="android:windowBackground">@color/creamBackground</item>
@@ -32,11 +32,8 @@
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <!-- Genişliğini tüm ekrana yayalım ki ortalanabilsin -->
         <item name="android:layout_width">match_parent</item>
-        <!-- Metni ortalamak için -->
         <item name="android:gravity">center</item>
-        <!-- İstediğin büyüklükte yap -->
         <item name="android:textSize">18sp</item>
     </style>
 
