@@ -5,15 +5,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true"
     android:background="@color/creamBackground"
     tools:context=".MainActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fitsSystemWindows="true">
+        android:layout_height="wrap_content">
 
+        <!-- Mevcut Toolbar -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
@@ -21,28 +20,56 @@
             app:backgroundTint="@color/creamPrimary"
             app:subtitleTextColor="@color/creamOnPrimary"
             app:subtitleTextAppearance="@style/SubtitleLarge"
-            app:subtitleCentered="true"/>
+            app:subtitleCentered="true" />
+
+        <!-- Görsel TabLayout -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:tabMode="fixed"
+            app:tabGravity="fill"
+            app:tabIndicatorColor="@color/creamOnPrimary"
+            app:tabTextColor="@color/creamOnPrimary"
+            app:tabSelectedTextColor="@color/creamBackground">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Günlük" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Haftalık" />
+        </com.google.android.material.tabs.TabLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
     <include
-        android:id="@+id/contentMain"
-        layout="@layout/content_main"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
+        android:id="@+id/includeDaily"
+        layout="@layout/content_main" />
 
+    <include
+        android:id="@+id/includeWeekly"
+        layout="@layout/content_weekly"
+        android:visibility="gone" />
+
+
+    <!-- FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_margin="16dp"
         android:layout_gravity="bottom|end"
         app:srcCompat="@android:drawable/ic_input_add"
         app:backgroundTint="@color/creamPrimaryVariant"
         app:tint="@color/creamOnPrimary"/>
 
+    <!-- İstatistik Metni (isteğe bağlı yerleştirme) -->
     <TextView
-        android:id="@+id/taskStatsTextView"
+        android:id="@+id/toolbarStatText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -51,6 +78,7 @@
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/creamOnBackground"
-        tools:text="Bugünün görevleri 2/7"/>
+        app:layout_anchor="@id/toolbar"
+        app:layout_anchorGravity="bottom|end"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

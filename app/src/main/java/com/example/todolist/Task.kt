@@ -12,5 +12,6 @@ data class Task(
     @ColumnInfo(name = "time") var time: String,
     @ColumnInfo(name = "isChecked") var isChecked: Boolean = false, // Checkbox durumu
     @ColumnInfo(name = "isPinned") var isPinned: Boolean = false,
-    @ColumnInfo(name = "sortOrder") var sortOrder: Int = 0
+    @ColumnInfo(name = "sortOrder") var sortOrder: Int = 0,
+    @ColumnInfo(name = "weekday") var weekday: String? = null
 )

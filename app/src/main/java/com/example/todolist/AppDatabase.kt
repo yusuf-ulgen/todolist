@@ -8,7 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class, NotificationPref::class], version = 8, exportSchema = false)
+    entities = [Task::class, ResetTime::class, DailyStat::class, TaskHistory::class, NotificationPref::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun resetTimeDao(): ResetTimeDao
@@ -26,23 +26,37 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "task_database"
                 )
-                    .addMigrations(MIGRATION_7_8)
+                    // Var olan migration’ları ekleyin:
+                    .addMigrations(MIGRATION_7_8, MIGRATION_8_9)
                     .build()
                 INSTANCE = instance
                 instance
             }
         }
 
-
+        // Mevcut 7→8 migration
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     """
-          CREATE TABLE IF NOT EXISTS notification_pref (
-            id INTEGER PRIMARY KEY NOT NULL,
-            kind INTEGER NOT NULL
-          )
-        """.trimIndent()
+                    CREATE TABLE IF NOT EXISTS notification_pref (
+                      id INTEGER PRIMARY KEY NOT NULL,
+                      kind INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Yeni 8→9 migration: Task tablosuna weekday sütunu ekliyoruz
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Sadece DEFAULT at, NOT NULL kaldır
+                db.execSQL(
+                    """
+        ALTER TABLE tasks
+        ADD COLUMN weekday TEXT DEFAULT ''
+      """.trimIndent()
                 )
             }
         }

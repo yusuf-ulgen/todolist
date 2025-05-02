@@ -26,4 +26,8 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE time = :time AND userId = :userId LIMIT 1")
     suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task?
+
+    @Query("SELECT * FROM tasks WHERE userId = :uid AND weekday = :day")
+    fun getTasksByWeekday(uid: String, day: String): List<Task>
+
 }

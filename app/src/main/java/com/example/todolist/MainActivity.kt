@@ -37,16 +37,18 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import android.graphics.Color
+import android.graphics.drawable.ClipDrawable.HORIZONTAL
 import android.view.View
+import android.widget.Toast
+import com.google.android.material.tabs.TabLayout
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.models.Shape
 import nl.dionsegijn.konfetti.core.models.Size
-import nl.dionsegijn.konfetti.xml.KonfettiView
+import java.time.DayOfWeek
+import java.time.format.TextStyle
 import java.util.concurrent.TimeUnit
-
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,8 +60,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var requestNotifPermission: ActivityResultLauncher<String>
     private lateinit var notifPrefRepo: NotificationPreferenceRepository
     private var tasks: List<Task> = mutableListOf()
-
-    // Bu flag, drag/swipe tamamlanmadan yenisini engelliyor
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
 
@@ -73,13 +73,32 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize view binding
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)  // Önce binding ile setContentView'i yapın
+        setContentView(binding.root)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = ""
             subtitle = "Bugünün görevleri 0/0"
             setDisplayShowTitleEnabled(true)
+        }
+
+        binding.tabLayout.apply {
+            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    when (tab.position) {
+                        0 -> {
+                            Toast.makeText(this@MainActivity, "Günlük seçildi", Toast.LENGTH_SHORT).show()
+                            showDailyView()
+                        }
+                        1 -> {
+                            Toast.makeText(this@MainActivity, "Haftalık seçildi", Toast.LENGTH_SHORT).show()
+                            showWeeklyView()
+                        }
+                    }
+                }
+                override fun onTabUnselected(tab: TabLayout.Tab) {}
+                override fun onTabReselected(tab: TabLayout.Tab) {}
+            })
         }
 
         val mAuth = FirebaseAuth.getInstance()
@@ -144,11 +163,11 @@ class MainActivity : AppCompatActivity() {
 
             }
         )
-        binding.contentMain.todoRecyclerView.adapter = adapter
+        binding.includeDaily.todoRecyclerView.adapter = adapter
 
         loadTasks()
 
-        val recyclerView = binding.contentMain.todoRecyclerView
+        val recyclerView = binding.includeDaily.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
@@ -245,6 +264,83 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showDailyView() {
+        // ViewBinding işe yaramıyorsa direkt:
+        findViewById<View>(R.id.includeDaily).visibility = View.VISIBLE
+        findViewById<View>(R.id.includeWeekly).visibility = View.GONE
+
+        // Günlük listeyi yeniden yükle ve istatistiği güncelle
+        loadTasks()
+        updateTaskStats()
+    }
+
+    private fun showWeeklyView() {
+        Toast.makeText(this, "Haftalık’a geçildi", Toast.LENGTH_SHORT).show()
+        findViewById<View>(R.id.includeDaily).visibility = View.GONE
+        findViewById<View>(R.id.includeWeekly).visibility = View.VISIBLE
+
+        setupWeeklyCalendar()
+    }
+
+    private fun setupWeeklyCalendar() {
+        // 1) Günlük TaskAdapter’ınız zaten globalde “adapter” diye var.
+
+        // 2) Haftalık mini takvim adapter’ı:
+        val days = listOf(
+            DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY,
+            DayOfWeek.SUNDAY
+        )
+        val calendarAdapter = CalendarAdapter(days) { selectedDow ->
+            loadWeeklyTasksForDay(selectedDow)
+        }
+
+        // 3) Takvim RecyclerView’e ata:
+        binding.includeWeekly.weeklyCalendarRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = calendarAdapter
+        }
+
+        // 4) Haftalık görevler RecyclerView’u (dikey) — yine global “adapter” kullanıyoruz:
+        binding.includeWeekly.weeklyTasksRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = this@MainActivity.adapter  // global TaskAdapter
+        }
+
+        // 5) Haftalık istatistik:
+        val done  = this.adapter.getTasks().count { it.isChecked }
+        val total = this.adapter.getTasks().size
+        binding.includeWeekly.weeklyStatTextView.text = "Haftalık: $done/$total"
+    }
+
+
+    private fun loadWeeklyTasksForDay(dow: DayOfWeek) {
+        GlobalScope.launch(Dispatchers.IO) {
+            val list = taskDao.getTasksByWeekday(FirebaseAuth.getInstance().currentUser!!.uid, dow.name)
+            withContext(Dispatchers.Main) {
+                binding.includeWeekly.weeklyTasksRecyclerView.apply {
+                    layoutManager = LinearLayoutManager(this@MainActivity)
+                    adapter = TaskAdapter(
+                        list.toMutableList(),
+                        ::addTaskForWeekly,
+                        taskDao,
+                        onStatsChanged = { /* günün istatistiği */ },
+                        onTimeClick   = { task, b -> /* timepicker */ }
+                    )
+                }
+                val done  = list.count { it.isChecked }
+                val total = list.size
+                binding.includeWeekly.weeklyStatTextView.text =
+                    "${dow.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: $done/$total"
+            }
+        }
+    }
+
+    private fun addTaskForWeekly(task: Task) {
+        // Burada 'task' objesine haftanın gününü atayabilirsiniz, örn: task.weekday = selectedDow.name
+        addTask(task)  // günlük ekleme ile aynı
+    }
+
     private fun showNotificationChoice(onChosen: (kind: Int) -> Unit) {
         val options = arrayOf(
             "Her görev için bildirim gönder",
@@ -283,7 +379,7 @@ class MainActivity : AppCompatActivity() {
                 adapter.setTasks(tasks)
 
                 if (scrollToEnd && tasks.isNotEmpty()) {
-                    binding.contentMain.todoRecyclerView
+                    binding.includeDaily.todoRecyclerView
                         .scrollToPosition(tasks.size - 1)
                 }
 
@@ -327,7 +423,7 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
 
         if (total > 0 && done == total) {
-            binding.contentMain.konfettiView.visibility = View.VISIBLE
+            binding.includeDaily.konfettiView.visibility = View.VISIBLE
 
             val party = Party(
                 colors = listOf(Color.YELLOW, Color.MAGENTA, Color.GREEN),
@@ -338,11 +434,11 @@ class MainActivity : AppCompatActivity() {
             )
 
             // start the confetti
-            binding.contentMain.konfettiView.start(party)
+            binding.includeDaily.konfettiView.start(party)
 
             // hide again after 5s
             Handler(Looper.getMainLooper()).postDelayed({
-                binding.contentMain.konfettiView.visibility = View.GONE
+                binding.includeDaily.konfettiView.visibility = View.GONE
             }, 5_000)
         }
     }
