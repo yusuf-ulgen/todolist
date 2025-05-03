@@ -12,5 +12,9 @@
         <item name="colorOnBackground">@color/creamOnBackground</item>
         <item name="colorOnSurface">@color/creamOnBackground</item>
         <!-- Accent aqua #00BFA5 olarak values/colors ve values-night/colors’dan çekilecek -->
+
+        <item name="tabUnselectedTextColor">@color/dark_tab_unselected</item>
+        <item name="tabSelectedTextColor">@color/dark_tab_selected</item>
+
     </style>
 </resources>

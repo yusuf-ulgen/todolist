@@ -1,9 +1,7 @@
 package com.example.todolist
 
 import android.app.AlertDialog
-import android.app.TimePickerDialog
 import android.content.Context
-import android.content.pm.PackageManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,14 +9,12 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.PopupMenu
 import android.graphics.Paint
-import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.util.*
 
 class TaskAdapter(
     private var tasks: MutableList<Task>,

@@ -10,7 +10,6 @@ class ThemeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityThemeBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Uygulanan temayı ilk başta uygula
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
         super.onCreate(savedInstanceState)
 
@@ -25,9 +24,7 @@ class ThemeActivity : AppCompatActivity() {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_LIGHT)
         ThemeHelper.applyTheme(ThemeHelper.THEME_LIGHT)
         Toast.makeText(this, "Açık tema seçildi", Toast.LENGTH_SHORT).show()
-        // MainActivity'e dön
         val intent = Intent(this, MainActivity::class.java).apply {
-            // Eğer zaten açıksa en üstteki Activity olarak getir
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         startActivity(intent)
@@ -39,7 +36,6 @@ class ThemeActivity : AppCompatActivity() {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_DARK)
         ThemeHelper.applyTheme(ThemeHelper.THEME_DARK)
         Toast.makeText(this, "Koyu tema seçildi", Toast.LENGTH_SHORT).show()
-        // MainActivity'e dön
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

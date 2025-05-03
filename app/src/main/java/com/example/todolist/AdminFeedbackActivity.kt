@@ -13,7 +13,7 @@ import com.google.firebase.ktx.Firebase
 class AdminFeedbackActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAdminFeedbackBinding
     private val db = Firebase.firestore
-    private val adminUid = "NvKPJHa85rfVgFId0r46FcKGq5u1"  // konsoldan kopyaladığın UID
+    private val adminUid = "NvKPJHa85rfVgFId0r46FcKGq5u1"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

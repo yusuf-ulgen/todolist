@@ -46,4 +46,17 @@ class CalendarAdapter(
             holder.binding.root.setBackgroundResource(0)
         }
     }
+
+    fun getPositionFor(day: DayOfWeek): Int {
+        return days.indexOf(day)
+    }
+
+    fun selectDay(dow: DayOfWeek) {
+        val pos = getPositionFor(dow).takeIf { it >= 0 } ?: return
+        val old = selectedPos
+        selectedPos = pos
+        notifyItemChanged(old)
+        notifyItemChanged(selectedPos)
+        onClick(dow)
+    }
 }

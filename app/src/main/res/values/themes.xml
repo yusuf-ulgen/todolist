@@ -29,6 +29,9 @@
         <item name="android:textColorPrimary">@color/creamOnBackground</item>
 
         <item name="pinIcon">@drawable/pin_light</item>
+
+        <item name="tabUnselectedTextColor">@color/light_tab_unselected</item>
+        <item name="tabSelectedTextColor">@color/light_tab_selected</item>
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">

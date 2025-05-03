@@ -29,5 +29,4 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE userId = :uid AND weekday = :day")
     fun getTasksByWeekday(uid: String, day: String): List<Task>
-
 }

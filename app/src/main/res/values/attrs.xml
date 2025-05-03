@@ -2,5 +2,7 @@
 <resources>
     <declare-styleable name="AppTheme">
         <attr name="pinIcon" format="reference"/>
+        <attr name="tabUnselectedTextColor" format="color" />
+        <attr name="tabSelectedTextColor"   format="color" />
     </declare-styleable>
 </resources>

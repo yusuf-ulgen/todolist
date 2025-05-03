@@ -30,8 +30,8 @@
             app:tabMode="fixed"
             app:tabGravity="fill"
             app:tabIndicatorColor="@color/creamOnPrimary"
-            app:tabTextColor="@color/creamOnPrimary"
-            app:tabSelectedTextColor="@color/creamBackground">
+            app:tabTextColor="?attr/tabUnselectedTextColor"
+            app:tabSelectedTextColor="?attr/tabSelectedTextColor">
 
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"

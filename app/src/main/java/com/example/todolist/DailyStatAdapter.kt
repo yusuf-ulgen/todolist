@@ -24,7 +24,6 @@ class DailyStatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
         ItemDailyStatBinding.inflate(LayoutInflater.from(parent.context), parent, false)
     )
-
     override fun getItemCount() = items.size
     override fun onBindViewHolder(holder: VH, pos: Int) = holder.bind(items[pos])
 }

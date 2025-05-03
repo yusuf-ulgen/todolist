@@ -20,4 +20,11 @@
     <color name="stat_text">#EEEEEE</color>
     <color name="stat_bg_light">@color/stat_bg_dark</color>
     <color name="stat_text_light">@color/stat_text_dark</color>
+
+    <color name="light_tab_unselected">#888888</color>
+    <color name="light_tab_selected">#1E88E5</color>
+
+    <color name="dark_tab_unselected">#BBBBBB</color>
+    <color name="dark_tab_selected">#90CAF9</color>
+
 </resources>
