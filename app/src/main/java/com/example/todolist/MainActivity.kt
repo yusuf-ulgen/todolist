@@ -2,6 +2,8 @@ package com.example.todolist
 
 import android.app.AlarmManager
 import android.app.AlertDialog
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.TimePickerDialog
 import android.content.Intent
@@ -98,6 +100,8 @@ class MainActivity : AppCompatActivity() {
             })
         }
 
+        createNotificationChannel()
+
         // örnek: açık gri / koyu mavi
         val unselectedColor = ContextCompat.getColor(this, R.color.gray)
         val selectedColor   = ContextCompat.getColor(this, R.color.black)
@@ -167,6 +171,17 @@ class MainActivity : AppCompatActivity() {
         )
         binding.includeDaily.todoRecyclerView.adapter = adapter
 
+
+        weeklyAdapter = TaskAdapter(
+            mutableListOf(),
+            { task -> addTaskForWeekly(task, currentSelectedDow) },
+            taskDao,
+            onStatsChanged = { updateWeeklyStats() },
+            onTimeClick   = { task, b -> showTimePickerAndSave(task, b) }
+        )
+        binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
+
+
         loadTasks()
 
         val recyclerView = binding.includeDaily.todoRecyclerView
@@ -177,7 +192,7 @@ class MainActivity : AppCompatActivity() {
         (recyclerView.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)
             ?.supportsChangeAnimations = false
 
-        // "2") Günlük için tamamen ayrı touchCallback:
+        // "1") Günlük için tamamen ayrı touchCallback:
         val dailyTouchCallback = object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
@@ -218,8 +233,24 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
+                // silinen görevi al
+                val deletedTask = tasks[pos]
+                // UI’dan kaldır
                 adapter.deleteItem(pos)
-                updateTaskStats()
+                // veritabanından sil
+                GlobalScope.launch(Dispatchers.IO) { taskDao.deleteTask(deletedTask) }
+
+                // 3 saniyelik undo Snackbar
+                Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG /*≈3s*/)
+                    .setAction("Geri Al") {
+                        // veritabanına geri ekle
+                        GlobalScope.launch(Dispatchers.IO) {
+                            taskDao.insertTask(deletedTask)
+                        }
+                        // UI’a geri ekle
+                        adapter.restoreItem(deletedTask, pos)
+                    }
+                    .show()
             }
 
             override fun isLongPressDragEnabled() = true
@@ -236,85 +267,88 @@ class MainActivity : AppCompatActivity() {
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
             override fun onMove(
-                recyclerView: RecyclerView,
+                rv: RecyclerView,
                 vh: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
-            ): Boolean {
-                if (isMoving) return false
-                isMoving = true
+            ) = false
 
-                val from = vh.adapterPosition
-                val to = target.adapterPosition
-                val list = weeklyAdapter.getTasks()
-                val pinnedCount = list.count { it.isPinned }
-
-                if ((from < pinnedCount && to < pinnedCount) ||
-                    (from >= pinnedCount && to >= pinnedCount)
-                ) {
-                    weeklyAdapter.moveItem(from, to)
-                    scheduleMoveReset()
-                    return true
-                }
-                scheduleMoveReset()
-                return false
-            }
-
-            override fun clearView(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder
-            ) {
-                super.clearView(recyclerView, viewHolder)
-                recyclerView.post {
-                    weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount)
-                }
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
+                // silinen görevi al yine weeklyAdapter’dan
+                val deletedTask = weeklyAdapter.getTasks()[pos]
+
+                // UI’dan kaldır ve DB’den sil
                 weeklyAdapter.deleteItem(pos)
+                GlobalScope.launch(Dispatchers.IO) {
+                    taskDao.deleteTask(deletedTask)
+                }
+
+                // sayaç güncelle
                 updateWeeklyStats()
+
+                // undo Snackbar
+                Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
+                    .setAction("Geri Al") {
+                        GlobalScope.launch(Dispatchers.IO) {
+                            taskDao.insertTask(deletedTask)
+                        }
+                        weeklyAdapter.restoreItem(deletedTask, pos)
+                        updateWeeklyStats()
+                    }
+                    .show()
             }
 
             override fun isLongPressDragEnabled() = true
         }
 
-        // haftalık RV’ye tak
         ItemTouchHelper(weeklyTouchCallback)
             .attachToRecyclerView(binding.includeWeekly.weeklyTasksRecyclerView)
 
-        // Diğer kodlar burada
         adapter.onItemDelete = { position ->
-            GlobalScope.launch(Dispatchers.IO) {
-                taskDao.deleteTask(tasks[position])
-                withContext(Dispatchers.Main) {
-                    adapter.deleteItem(position)
-                    updateTaskStats()
+            val deletedTask = tasks[position]
+            adapter.deleteItem(position)
+            GlobalScope.launch(Dispatchers.IO) { taskDao.deleteTask(deletedTask) }
+
+            Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
+                .setAction("Geri Al") {
+                    GlobalScope.launch(Dispatchers.IO) { taskDao.insertTask(deletedTask) }
+                    adapter.restoreItem(deletedTask, position)
                 }
-            }
+                .show()
         }
 
-        weeklyAdapter = TaskAdapter(
-            mutableListOf(),
-            { task -> addTaskForWeekly(task, currentSelectedDow) },
-            taskDao,
-            onStatsChanged = { updateWeeklyStats() },
-            onTimeClick   = { task, binding ->
-                // aynı günlüktekinin logic’i:
-                showTimePickerAndSave(task, binding)
-            }
-        )
-
-        binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
-
         weeklyAdapter.onItemDelete = { pos ->
-            val t = weeklyAdapter.getTasks()[pos]
+            // sadece weeklyAdapter listesinden al
+            val deletedTask = weeklyAdapter.getTasks()[pos]
+
+            // UI’dan kaldır
+            weeklyAdapter.deleteItem(pos)
+            // veritabanından sil
             GlobalScope.launch(Dispatchers.IO) {
-                taskDao.deleteTask(t)
-                withContext(Dispatchers.Main) {
-                    weeklyAdapter.deleteItem(pos)
+                taskDao.deleteTask(deletedTask)
+            }
+
+            // hemen sayaç güncellensin
+            updateWeeklyStats()
+
+            // 3 saniyelik undo Snackbar
+            Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
+                .setAction("Geri Al") {
+                    // veritabanına geri koy
+                    GlobalScope.launch(Dispatchers.IO) {
+                        taskDao.insertTask(deletedTask)
+                    }
+                    // UI’a geri ekle
+                    weeklyAdapter.restoreItem(deletedTask, pos)
+                    // yine sayaç güncellensin
                     updateWeeklyStats()
                 }
-            }
+                .show()
         }
 
         binding.fab.setOnClickListener {
@@ -425,13 +459,7 @@ class MainActivity : AppCompatActivity() {
                 updateWeeklyStats()
             }
         }
-    }
-
-    private fun updateWeeklyStats() {
-        val total = weeklyAdapter.getTasks().size
-        val done  = weeklyAdapter.getTasks().count { it.isChecked }
-        binding.includeWeekly.weeklyStatTextView.text =
-            "${currentSelectedDow.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: $done/$total"
+        updateWeeklyStats()
     }
 
     private fun addTaskForWeekly(task: Task, dow: DayOfWeek) {
@@ -518,33 +546,63 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun fireDailyConfettiIfNeeded() {
+        val total = adapter.getTasks().size
+        val done  = adapter.getTasks().count { it.isChecked }
+        if (total > 0 && done == total) {
+            binding.includeDaily.konfettiView.apply {
+                // Önce üst katmana taşı
+                bringToFront()
+                // Başlat
+                visibility = View.VISIBLE
+                start(createParty())
+                postDelayed({ visibility = View.GONE }, 5_000)
+            }
+        }
+    }
+
+    private fun fireWeeklyConfettiIfNeeded() {
+        val total = weeklyAdapter.getTasks().size
+        val done  = weeklyAdapter.getTasks().count { it.isChecked }
+        if (total > 0 && done == total) {
+            binding.includeWeekly.weeklyKonfettiView.apply {
+                // Önce üst katmana taşı
+                bringToFront()
+                // Başlat
+                visibility = View.VISIBLE
+                start(createParty())
+                postDelayed({ visibility = View.GONE }, 5_000)
+            }
+        }
+    }
+
+    private fun createParty(): Party {
+        return Party(
+            colors = listOf(Color.YELLOW, Color.MAGENTA, Color.GREEN),
+            shapes = listOf(Shape.Circle, Shape.Square),
+            size = listOf(Size(12)),
+            position = Position.Relative(0.5, 0.5),
+            emitter = Emitter(duration = 1, TimeUnit.SECONDS).max(200)
+        )
+    }
+
     private fun updateTaskStats() {
         val total = adapter.getTasks().size
         val done  = adapter.getTasks().count { it.isChecked }
 
         supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
 
-        if (total > 0 && done == total) {
-            binding.includeDaily.konfettiView.visibility = View.VISIBLE
-
-            val party = Party(
-                colors = listOf(Color.YELLOW, Color.MAGENTA, Color.GREEN),
-                shapes = listOf(Shape.Circle, Shape.Square),
-                size = listOf(Size(12)),
-                position = Position.Relative(0.5, 0.5),
-                emitter = Emitter(duration = 1, TimeUnit.SECONDS).max(200)
-            )
-
-            // start the confetti
-            binding.includeDaily.konfettiView.start(party)
-
-            // hide again after 5s
-            Handler(Looper.getMainLooper()).postDelayed({
-                binding.includeDaily.konfettiView.visibility = View.GONE
-            }, 5_000)
-        }
+        fireDailyConfettiIfNeeded()
     }
 
+    private fun updateWeeklyStats() {
+        val total = weeklyAdapter.getTasks().size
+        val done  = weeklyAdapter.getTasks().count { it.isChecked }
+        binding.includeWeekly.weeklyStatTextView.text =
+            "${currentSelectedDow.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: $done/$total"
+
+        fireWeeklyConfettiIfNeeded()
+    }
 
     fun scheduleDailyResetAlarm(context: Context, resetHour: Int, resetMinute: Int) {
         val intent = Intent(context, ResetReceiver::class.java)
@@ -721,69 +779,74 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelTaskNotification(task: Task) {
-        val intent = Intent(this, NotificationReceiver::class.java)
+        val requestCode = ((task.id shl 3) + (task.weekday?.hashCode() ?: 0)).toInt()
         val pi = PendingIntent.getBroadcast(
             this,
-            task.id.toInt(),
-            intent,
+            requestCode,
+            Intent(this, NotificationReceiver::class.java),
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )
         pi?.let {
-            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            am.cancel(it)
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(it)
             it.cancel()
         }
     }
 
+
+
     private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
+        cancelTaskNotification(task)
+
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) {
-                add(Calendar.DAY_OF_YEAR, 1)
+            if (!task.weekday.isNullOrEmpty()) {
+                // Haftalık
+                val targetDow = DayOfWeek.valueOf(task.weekday!!).value % 7 + 1
+                set(Calendar.DAY_OF_WEEK, targetDow)
+                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.WEEK_OF_YEAR, 1)
+            } else {
+                // Günlük
+                if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
             }
         }
 
         val intent = Intent(this, NotificationReceiver::class.java).apply {
-            putExtra("taskId", task.id.toInt())      // Int olarak saklıyoruz
+            putExtra("taskId", task.id.toInt())
             putExtra("taskContent", task.content)
         }
 
+        val requestCode = ((task.id shl 3) + (task.weekday?.hashCode() ?: 0)).toInt()
         val pi = PendingIntent.getBroadcast(
             this,
-            task.id.toInt(),
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        am.setExactAndAllowWhileIdle(
+        (getSystemService(Context.ALARM_SERVICE) as AlarmManager).setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             cal.timeInMillis,
             pi
         )
     }
 
+
     private fun showTimePickerAndSave(task: Task, b: ItemTaskBinding) {
         val calNow = Calendar.getInstance()
         TimePickerDialog(
             this,
             { _, hourOfDay, minute ->
-                // 1) TextView’i güncelle
                 val timeText = "%02d:%02d".format(hourOfDay, minute)
                 b.timeTextView.text = timeText
                 task.time = timeText
 
-                // 2) Veritabanına kaydet
                 GlobalScope.launch(Dispatchers.IO) {
                     taskDao.updateTask(task)
                 }
 
-                // 3) Mevcut alarm varsa iptal et
                 cancelTaskNotification(task)
-
-                // 4) Yeni saatte alarmı planla
                 scheduleTaskNotification(task, hourOfDay, minute)
 
             },
@@ -791,5 +854,25 @@ class MainActivity : AppCompatActivity() {
             calNow.get(Calendar.MINUTE),
             true
         ).show()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "task_channel"
+            val channelName = "Görev Hatırlatıcı"
+            val channelDesc = "Görev zamanları için hatırlatıcı bildirimleri"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+
+            val channel = NotificationChannel(channelId, channelName, importance).apply {
+                description = channelDesc
+                enableLights(true)
+                lightColor = Color.BLUE
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
+            }
+
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(channel)
+        }
     }
 }

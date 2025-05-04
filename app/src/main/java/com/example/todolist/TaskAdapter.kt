@@ -217,6 +217,12 @@ class TaskAdapter(
         }
     }
 
+    /** Pozisyona göre silinen görevi geri eklemek için: */
+    fun restoreItem(task: Task, position: Int) {
+        tasks.add(position, task)
+        notifyItemInserted(position)
+    }
+
     fun setTasks(newTasks: List<Task>) {
         tasks = newTasks.toMutableList()
         notifyDataSetChanged()

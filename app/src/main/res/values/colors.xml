@@ -9,13 +9,14 @@
     <color name="colorBackground">#FFFFFF</color>
     <color name="colorText">#212121</color>
     <color name="gray">#9E9E9E</color>
+    <color name="primary">#9E9E9E</color>
 
     <!-- Cream teması renkleri -->
     <color name="creamBackground">#FFF8E1</color>
     <color name="creamPrimary">#D2B48C</color>
     <color name="creamPrimaryVariant">#B9976B</color>
     <color name="creamOnBackground">#3E2723</color>
-    <color name="creamOnPrimary">#212121</color>
+    <color name="creamOnPrimary">#8C7E5E</color>
 
     <!-- Task metni (light theme’de koyu kahve) -->
     <color name="task_text_default">#3E2723</color>
