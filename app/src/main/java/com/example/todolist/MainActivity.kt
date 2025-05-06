@@ -67,6 +67,8 @@ class MainActivity : AppCompatActivity() {
     private var tasks: List<Task> = mutableListOf()
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
+    private var listId: Long = 1L   // default
+    private var listName: String = "Görevlerim"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,10 +84,12 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
-            title = ""
+            title = listName
             subtitle = "Bugünün görevleri 0/0"
             setDisplayShowTitleEnabled(true)
         }
+
+        listId = intent?.getLongExtra("listId", 1L) ?: 1L
 
         binding.tabLayout.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -181,9 +185,44 @@ class MainActivity : AppCompatActivity() {
         )
         binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
 
-
         loadTasks()
 
+        intent?.let {
+            listId   = it.getLongExtra("listId", 1L)
+            listName = it.getStringExtra("listName") ?: "Görevlerim"
+        }
+
+        // 2) Toolbar başlığı olarak liste adını koy
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.apply {
+            title = listName
+            subtitle = ""  // veya günlük görev sayısını alt yazı olarak istiyorsan burayı ayarla
+        }
+
+        // 3) Eğer özel bir liste (id != 1) ise tabları ve haftalığı kapat:
+        if (listId != 1L) {
+            binding.tabLayout.visibility        = View.GONE
+            binding.includeWeekly.root.visibility = View.GONE
+            binding.includeDaily.root.visibility  = View.VISIBLE
+        } else {
+            binding.tabLayout.visibility        = View.VISIBLE
+            binding.includeWeekly.root.visibility = View.GONE
+            binding.includeDaily.root.visibility  = View.VISIBLE
+
+            // Tam bir listener nesnesi oluştur:
+            binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    when (tab.position) {
+                        0 -> showDailyView()
+                        1 -> showWeeklyView()
+                    }
+                }
+                override fun onTabUnselected(tab: TabLayout.Tab) {}
+                override fun onTabReselected(tab: TabLayout.Tab) {}
+            })
+        }
+
+        // listener kapandıktan sonra buraya devam et:
         val recyclerView = binding.includeDaily.todoRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -388,6 +427,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    override fun onBackPressed() {
+        startActivity(Intent(this, ListelerimActivity::class.java))
+        super.onBackPressed()
+    }
+
 
     private fun showDailyView() {
         // ViewBinding işe yaramıyorsa direkt:
@@ -791,8 +835,6 @@ class MainActivity : AppCompatActivity() {
             it.cancel()
         }
     }
-
-
 
     private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
         cancelTaskNotification(task)

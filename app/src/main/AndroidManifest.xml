@@ -18,6 +18,19 @@
         android:theme="@style/Theme.ToDoList"
         tools:targetApi="31">
         <activity
+            android:name=".ListelerimActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ToDoList" />
+        <activity
+            android:name=".Giris"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".AdminFeedbackActivity"
             android:exported="false" />
         <activity
@@ -30,20 +43,6 @@
             android:name=".StatisticsActivity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.ToDoList"
-            android:windowSoftInputMode="adjustResize|stateHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".Giris"
-            android:exported="true" />
-        <activity
             android:name=".ResetTimeActivity"
             android:exported="false" />
         <activity
@@ -52,6 +51,11 @@
         <activity
             android:name=".Settings"
             android:exported="false" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.ToDoList"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
         <receiver android:name=".NotificationReceiver" />
         <receiver

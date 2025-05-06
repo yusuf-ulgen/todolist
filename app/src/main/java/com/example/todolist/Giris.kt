@@ -29,8 +29,15 @@ class Giris : AppCompatActivity() {
         binding = ActivityGirisBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Firebase auth
+        // 1) FirebaseAuth'ı başlat
         mAuth = FirebaseAuth.getInstance()
+
+        // 2) Eğer zaten login olmuşsa ListelerimActivity'ye git
+        if (mAuth.currentUser != null) {
+            startActivity(Intent(this, ListelerimActivity::class.java))
+            finish()
+            return
+        }
 
         // Google Sign-In ayarları
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -150,7 +157,7 @@ class Giris : AppCompatActivity() {
     }
 
     private fun navigateToMain() {
-        startActivity(Intent(this, MainActivity::class.java))
+        startActivity(Intent(this, ListelerimActivity::class.java))
         finish()
     }
 
