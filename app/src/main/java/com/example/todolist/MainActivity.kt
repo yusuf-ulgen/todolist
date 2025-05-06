@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     private var tasks: List<Task> = mutableListOf()
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
-    private var listId: Long = 1L   // default
+    private var currentListId: Long = 0L
     private var listName: String = "Görevlerim"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +89,8 @@ class MainActivity : AppCompatActivity() {
             setDisplayShowTitleEnabled(true)
         }
 
-        listId = intent?.getLongExtra("listId", 1L) ?: 1L
+        currentListId = intent?.getLongExtra("listId", 1L) ?: 1L
+        listName = intent?.getStringExtra("listName") ?: "Görevlerim"
 
         binding.tabLayout.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -130,7 +131,7 @@ class MainActivity : AppCompatActivity() {
 
         adapter = TaskAdapter(
             mutableListOf(),
-            ::addTask,
+            { task -> addTask(task, currentListId) },  // currentListId'yi burada geçiriyoruz
             taskDao,
             { updateTaskStats() },
             onTimeClick = { task, b ->
@@ -178,17 +179,17 @@ class MainActivity : AppCompatActivity() {
 
         weeklyAdapter = TaskAdapter(
             mutableListOf(),
-            { task -> addTaskForWeekly(task, currentSelectedDow) },
+            { task -> addTaskForWeekly(task, currentSelectedDow, currentListId) },  // currentListId'yi geçiriyoruz
             taskDao,
             onStatsChanged = { updateWeeklyStats() },
-            onTimeClick   = { task, b -> showTimePickerAndSave(task, b) }
+            onTimeClick = { task, b -> showTimePickerAndSave(task, b) }
         )
         binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
 
         loadTasks()
 
         intent?.let {
-            listId   = it.getLongExtra("listId", 1L)
+            currentListId = it.getLongExtra("listId", 1L) // Burada default değeri 1L olarak veriyoruz
             listName = it.getStringExtra("listName") ?: "Görevlerim"
         }
 
@@ -200,7 +201,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 3) Eğer özel bir liste (id != 1) ise tabları ve haftalığı kapat:
-        if (listId != 1L) {
+        if (currentListId != 1L) {
             binding.tabLayout.visibility        = View.GONE
             binding.includeWeekly.root.visibility = View.GONE
             binding.includeDaily.root.visibility  = View.VISIBLE
@@ -392,24 +393,22 @@ class MainActivity : AppCompatActivity() {
 
         binding.fab.setOnClickListener {
             // Haftalık moddaysak includeWeekly görünür olmalı
+            val newTask = Task(
+                userId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                content = "",
+                time = "",
+                listId = currentListId // Burada listId'yi geçiriyoruz
+            )
+
             if (findViewById<View>(R.id.includeWeekly).visibility == View.VISIBLE) {
-                // Haftalık mod
-                val newTask = Task(
-                    userId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
-                    content = "",
-                    time = ""
-                )
-                addTaskForWeekly(newTask, currentSelectedDow)
+                // Haftalık moddaysa, yeni görev ekle
+                addTaskForWeekly(newTask, currentSelectedDow, currentListId) // Burada da listId'yi geçiriyoruz
             } else {
-                // Günlük mod
-                val newTask = Task(
-                    userId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
-                    content = "",
-                    time = ""
-                )
-                addTask(newTask)
+                // Günlük moddaysa, yeni görev ekle
+                addTask(newTask, currentListId) // Burada da listId'yi geçiriyoruz
             }
         }
+
 
 
         val db = AppDatabase.getDatabase(this)
@@ -506,12 +505,14 @@ class MainActivity : AppCompatActivity() {
         updateWeeklyStats()
     }
 
-    private fun addTaskForWeekly(task: Task, dow: DayOfWeek) {
-        task.weekday = dow.name
+    private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: Long) {
+        task.weekday = selectedDayOfWeek.name
+        task.listId = listId // listId'yi ekliyoruz
+
         GlobalScope.launch(Dispatchers.IO) {
             taskDao.insertTask(task)
             withContext(Dispatchers.Main) {
-                loadWeeklyTasksForDay(dow)
+                loadWeeklyTasksForDay(selectedDayOfWeek)
             }
         }
     }
@@ -547,45 +548,51 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadTasks(scrollToEnd: Boolean = false) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         GlobalScope.launch(Dispatchers.IO) {
-            val all      = taskDao.getTasksByUserId(uid)
-            val daily    = all.filter { it.weekday.isNullOrEmpty() }
-            withContext(Dispatchers.Main) {
-                tasks = daily
-                adapter.setTasks(tasks)
-                if (scrollToEnd && tasks.isNotEmpty()) {
-                    binding.includeDaily.todoRecyclerView
-                        .scrollToPosition(tasks.size - 1)
+            val currentList = taskDao.getTasksByListId(currentListId)
+
+            // Eğer liste boşsa
+            if (currentList.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    adapter.setTasks(mutableListOf()) // Adapter'e boş listeyi ver
                 }
-                updateTaskStats()
+            } else {
+                withContext(Dispatchers.Main) {
+                    tasks = currentList
+                    adapter.setTasks(tasks)
+                    if (scrollToEnd && tasks.isNotEmpty()) {
+                        // Yeni eklenen göreve kadar kaydırma işlemi
+                        binding.includeDaily.todoRecyclerView.scrollToPosition(tasks.size - 1)
+                    }
+                }
             }
         }
     }
 
-    private fun addTask(task: Task) {
-        val currentUser = mAuth.currentUser ?: return
-        task.userId = currentUser.uid
+    private fun addTask(task: Task, listId: Long) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+
+        task.listId = listId // Assigning the listId
+
         GlobalScope.launch(Dispatchers.IO) {
-            val existing = taskDao.getTasksByUserId(currentUser.uid)
+            val existing = taskDao.getTasksByUserId(currentUser?.uid ?: "") // Safely using currentUser's UID
             task.sortOrder = existing.size
 
+            // Checking if there's a conflict with the time for the task
             if (task.time.isNotBlank() && task.time != "Saat") {
-                val conflict = taskDao.getTaskByTimeAndUserId(task.time, currentUser.uid)
+                val conflict = taskDao.getTaskByTimeAndUserId(task.time, currentUser?.uid ?: "")
                 if (conflict != null) {
                     withContext(Dispatchers.Main) {
-                        Snackbar.make(
-                            binding.root,
-                            "Bu saatte zaten bir görev var!",
-                            Snackbar.LENGTH_SHORT
-                        ).show()
+                        Snackbar.make(binding.root, "Bu saatte zaten bir görev var!", Snackbar.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
             }
 
-            taskDao.insertTask(task)
+            taskDao.insertTask(task) // Inserting the task into the database
             withContext(Dispatchers.Main) {
-                loadTasks(scrollToEnd = true)
+                loadTasks(scrollToEnd = true) // Reloading the tasks and scrolling to the end
             }
         }
     }

@@ -29,4 +29,7 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE userId = :uid AND weekday = :day")
     fun getTasksByWeekday(uid: String, day: String): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE listId = :listId")
+    fun getTasksByListId(listId: Long): List<Task>  // listId'ye göre görevleri döndürür
 }

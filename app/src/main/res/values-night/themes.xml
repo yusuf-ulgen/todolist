@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+    <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar.Bridge">
         <item name="pinIcon">@drawable/pin_night</item>
 
         <item name="android:colorBackground">@color/creamBackground</item>
@@ -16,5 +17,10 @@
         <item name="tabUnselectedTextColor">@color/dark_tab_unselected</item>
         <item name="tabSelectedTextColor">@color/dark_tab_selected</item>
 
+    </style>
+    <!-- Base application theme. -->
+    <style name="Base.Theme.ToDoList" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
 </resources>

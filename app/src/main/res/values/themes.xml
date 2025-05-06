@@ -2,7 +2,7 @@
 <resources>
 
     <!-- Uygulamanın ana teması, light ve dark arasında otomatik geçiş yapar -->
-    <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar.Bridge">
         <!-- Toolbar, FAB vb. ana renkler -->
         <item name="colorPrimary">@color/creamPrimary</item>
         <item name="colorPrimaryVariant">@color/creamPrimaryVariant</item>
@@ -32,12 +32,18 @@
 
         <item name="tabUnselectedTextColor">@color/light_tab_unselected</item>
         <item name="tabSelectedTextColor">@color/light_tab_selected</item>
+
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">
         <item name="android:layout_width">match_parent</item>
         <item name="android:gravity">center</item>
         <item name="android:textSize">18sp</item>
+    </style>
+    <!-- Base application theme. -->
+    <style name="Base.Theme.ToDoList" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
 </resources>

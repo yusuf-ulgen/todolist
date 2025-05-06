@@ -11,5 +11,8 @@ interface TodolistDao {
 
     @Insert
     suspend fun insertList(list: Todolist): Long
+
+    @Insert
+    suspend fun insert(todolist: Todolist)
 }
 
