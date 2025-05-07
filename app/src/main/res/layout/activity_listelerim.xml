@@ -51,4 +51,11 @@
         android:layout_margin="16dp"
         app:srcCompat="@android:drawable/ic_input_add" />
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:padding="8dp" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

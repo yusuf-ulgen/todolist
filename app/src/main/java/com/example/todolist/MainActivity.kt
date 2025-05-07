@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
     private var currentListId: Long = 0L
-    private var listName: String = "Görevlerim"
+    private var listName: String = "GÜNLÜK/HAFTALIK"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,15 +82,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        currentListId = intent?.getLongExtra("listId", 1L) ?: 1L
+        listName      = intent?.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
+
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = listName
-            subtitle = "Bugünün görevleri 0/0"
+            subtitle = if (currentListId == 1L) "" else ""
             setDisplayShowTitleEnabled(true)
         }
 
-        currentListId = intent?.getLongExtra("listId", 1L) ?: 1L
-        listName = intent?.getStringExtra("listName") ?: "Görevlerim"
+        if (currentListId != 1L) {
+            // özel listelerde recyclerview üstündeki TextView’i gizle
+            binding.toolbarStatText.visibility = View.GONE
+        }
 
         binding.tabLayout.apply {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -190,7 +195,7 @@ class MainActivity : AppCompatActivity() {
 
         intent?.let {
             currentListId = it.getLongExtra("listId", 1L) // Burada default değeri 1L olarak veriyoruz
-            listName = it.getStringExtra("listName") ?: "Görevlerim"
+            listName = it.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
         }
 
         // 2) Toolbar başlığı olarak liste adını koy

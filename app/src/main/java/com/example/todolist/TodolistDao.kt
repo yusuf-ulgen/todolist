@@ -1,6 +1,7 @@
 package com.example.todolist.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 
@@ -14,5 +15,8 @@ interface TodolistDao {
 
     @Insert
     suspend fun insert(todolist: Todolist)
+
+    @Delete
+    suspend fun delete(todolist: Todolist)
 }
 

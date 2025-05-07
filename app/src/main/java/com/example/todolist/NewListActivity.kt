@@ -2,7 +2,6 @@ package com.example.todolist
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todolist.data.Todolist
@@ -15,19 +14,26 @@ import kotlinx.coroutines.withContext
 class NewListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNewListBinding
-    val currentListId = intent.getLongExtra("currentListId", 0L) // default olarak 0 alıyoruz
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
         super.onCreate(savedInstanceState)
         binding = ActivityNewListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Toolbar ayarları
+        // **Intent ile gelen değerleri burada alıyoruz**
+        val currentListId = intent.getLongExtra("listId", 1L)
+        val listName      = intent.getStringExtra("listName") ?: "Yeni Liste"
+
         setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener {
-            finish() // Geri tuşuna basınca activity'yi kapat
+        supportActionBar?.title = listName
+
+        // FAB’e tıklandığında bu listeye ait işlemler (örneğin yeni göreve geçiş) buraya
+        binding.fab.setOnClickListener {
+            // Örnek: MainActivity’ye geri dönerken listId’yi iletmek isterseniz:
+            val i = Intent(this, MainActivity::class.java)
+            i.putExtra("listId", currentListId)
+            startActivity(i)
         }
 
         // "Yeni Liste" butonuna basıldığında listeyi kaydet ve ListelerimActivity'e dön

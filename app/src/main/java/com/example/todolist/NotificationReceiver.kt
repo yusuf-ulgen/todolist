@@ -38,7 +38,7 @@ class NotificationReceiver : BroadcastReceiver() {
         }
 
         // 3) Uygulamayı açacak PendingIntent
-        val openIntent = Intent(context, MainActivity::class.java).apply {
+        val openIntent = Intent(context, ListelerimActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pi = PendingIntent.getActivity(

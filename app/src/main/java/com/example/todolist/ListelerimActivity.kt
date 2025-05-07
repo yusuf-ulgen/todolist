@@ -4,8 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.data.Todolist
 import com.example.todolist.data.TodolistDao
 import com.example.todolist.databinding.ActivityListelerimBinding
@@ -17,6 +20,8 @@ class ListelerimActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityListelerimBinding
     private lateinit var listDao: TodolistDao
+    private lateinit var recyclerView: RecyclerView
+    private var lists: List<Todolist> = emptyList()  // Listeleri tutacak bir değişken
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Tema’yı uygula
@@ -25,6 +30,9 @@ class ListelerimActivity : AppCompatActivity() {
         binding = ActivityListelerimBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+
+        recyclerView = findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
 
         // DAO al
         listDao = AppDatabase.getDatabase(this).todolistDao()
@@ -41,12 +49,17 @@ class ListelerimActivity : AppCompatActivity() {
         binding.fab.setOnClickListener {
             startActivity(Intent(this, NewListActivity::class.java))
         }
+
+        recyclerView.adapter = ListelerimAdapter(lists) { position ->
+            // Uzun tıklama olayı burada işleniyor
+            showDeleteConfirmationDialog(position)
+        }
     }
 
-    private fun loadLists() {
+        private fun loadLists() {
         lifecycleScope.launch {
-            val lists = withContext(Dispatchers.IO) {
-                listDao.getAllLists()
+            lists = withContext(Dispatchers.IO) {
+                listDao.getAllLists()  // Veritabanından tüm listeleri alıyoruz
             }
             // eskileri temizleyelim
             binding.buttonContainer.removeAllViews()
@@ -63,7 +76,6 @@ class ListelerimActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-
     private fun addListButton(todoList: Todolist) {
         val marginPx = (16 * resources.displayMetrics.density).toInt()
         val btn = Button(this).apply {
@@ -72,7 +84,8 @@ class ListelerimActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = marginPx }
-            // tıklayınca o listeyi aç (MainActivity)
+
+            // Kısa tık: listeyi aç
             setOnClickListener {
                 Intent(this@ListelerimActivity, MainActivity::class.java).also { intent ->
                     intent.putExtra("listId", todoList.id)
@@ -80,7 +93,48 @@ class ListelerimActivity : AppCompatActivity() {
                     startActivity(intent)
                 }
             }
+
+            // Uzun basma: silme onayı
+            setOnLongClickListener {
+                AlertDialog.Builder(this@ListelerimActivity)
+                    .setTitle("Silme Onayı")
+                    .setMessage("“${todoList.name}” listesini silmek istediğinize emin misiniz?")
+                    .setPositiveButton("Evet") { _, _ ->
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.IO) {
+                                listDao.delete(todoList)
+                            }
+                            loadLists()
+                        }
+                    }
+                    .setNegativeButton("Hayır", null)
+                    .show()
+                true
+            }
         }
         binding.buttonContainer.addView(btn)
+    }
+
+    fun showDeleteConfirmationDialog(position: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("Silme Onayı")
+            .setMessage("Bu listeyi silmek istediğinizden emin misiniz?")
+            .setPositiveButton("Evet") { _, _ ->
+                deleteList(position)  // Position parametresi ile listeyi sil
+            }
+            .setNegativeButton("Hayır", null)
+            .show()
+    }
+
+
+    fun deleteList(position: Int) {
+        val listToDelete = lists[position]  // Bu listedeki öğeyi alıyoruz
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                listDao.delete(listToDelete) // Veritabanından silme işlemi
+            }
+            // Listeden silinen öğeyi UI'dan kaldır
+            loadLists()  // Listeyi tekrar yükleyelim
+        }
     }
 }

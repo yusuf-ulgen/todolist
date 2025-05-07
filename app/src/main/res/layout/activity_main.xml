@@ -16,7 +16,9 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             app:backgroundTint="@color/creamPrimary"
             app:subtitleTextColor="@color/creamOnPrimary"
             app:subtitleTextAppearance="@style/SubtitleLarge"
