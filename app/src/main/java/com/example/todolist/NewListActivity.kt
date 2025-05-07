@@ -57,9 +57,11 @@ class NewListActivity : AppCompatActivity() {
 
             // Liste kaydedildikten sonra ListelerimActivity'ye dön
             withContext(Dispatchers.Main) {
-                val intent = Intent(this@NewListActivity, ListelerimActivity::class.java)
-                startActivity(intent) // Listelerim sayfasına geçiş
-                finish() // Yeni liste sayfasını kapat
+                val intent = Intent(this@NewListActivity, ListelerimActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(intent)
+                finish()
             }
         }
     }

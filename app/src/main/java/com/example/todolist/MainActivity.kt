@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
     private var tasks: List<Task> = mutableListOf()
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
-    private var currentListId: Long = 0L
+    private var currentListId: Long = 1L
     private var listName: String = "GÜNLÜK/HAFTALIK"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -432,8 +432,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     override fun onBackPressed() {
-        startActivity(Intent(this, ListelerimActivity::class.java))
-        super.onBackPressed()
+        finish()
     }
 
 
@@ -850,7 +849,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
         cancelTaskNotification(task)
-
+        val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -869,21 +868,22 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, NotificationReceiver::class.java).apply {
             putExtra("taskId", task.id.toInt())
             putExtra("taskContent", task.content)
+            putExtra("listId", task.listId)
         }
 
-        val requestCode = ((task.id shl 3) + (task.weekday?.hashCode() ?: 0)).toInt()
         val pi = PendingIntent.getBroadcast(
-            this,
-            requestCode,
+            this, task.id.toInt(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        (getSystemService(Context.ALARM_SERVICE) as AlarmManager).setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            cal.timeInMillis,
-            pi
-        )
+        try {
+            // Android M+ için exact & idle’da da çalışır
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+        } catch (se: SecurityException) {
+            // izin yoksa; en yakın inexact zamanda çalıştır
+            am.set(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+        }
     }
 
 

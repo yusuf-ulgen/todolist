@@ -35,7 +35,7 @@
                 android:id="@+id/buttonTodolist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="To-Do List"
+                android:text="GÜNLÜK/HAFTALIK"
                 android:textSize="18sp"
                 app:backgroundTint="?attr/colorPrimary"
                 android:textColor="?attr/colorOnPrimary" />
