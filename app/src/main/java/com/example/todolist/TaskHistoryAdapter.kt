@@ -3,6 +3,7 @@ package com.example.todolist
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.example.todolist.data.TaskHistory
 import com.example.todolist.databinding.ItemTaskHistoryBinding
 
 class TaskHistoryAdapter(

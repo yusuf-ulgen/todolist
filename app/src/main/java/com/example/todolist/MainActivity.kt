@@ -21,7 +21,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.todolist.NotificationPreferenceRepository
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -39,8 +38,12 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import android.graphics.Color
-import android.graphics.drawable.ClipDrawable.HORIZONTAL
 import android.view.View
+import com.example.todolist.data.DailyStat
+import com.example.todolist.data.ResetTimeDao
+import com.example.todolist.data.Task
+import com.example.todolist.data.TaskDao
+import com.example.todolist.data.TaskHistory
 import com.google.android.material.tabs.TabLayout
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position

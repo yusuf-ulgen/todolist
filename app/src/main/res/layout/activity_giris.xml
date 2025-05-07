@@ -124,5 +124,4 @@
             android:textColor="?attr/colorOnBackground"/>
 
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

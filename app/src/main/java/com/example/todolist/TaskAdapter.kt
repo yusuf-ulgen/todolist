@@ -11,6 +11,8 @@ import android.widget.PopupMenu
 import android.graphics.Paint
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.example.todolist.data.Task
+import com.example.todolist.data.TaskDao
 import com.example.todolist.databinding.ItemTaskBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope

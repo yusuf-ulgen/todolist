@@ -76,4 +76,5 @@
         android:textColor="@color/creamOnBackground"
         app:layout_anchor="@id/toolbar"
         app:layout_anchorGravity="bottom|end"/>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

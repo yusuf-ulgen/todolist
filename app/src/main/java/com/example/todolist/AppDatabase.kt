@@ -3,6 +3,16 @@ package com.example.todolist
 import android.content.Context
 import androidx.room.*
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.todolist.data.DailyStat
+import com.example.todolist.data.DailyStatDao
+import com.example.todolist.data.NotificationPref
+import com.example.todolist.data.NotificationPrefDao
+import com.example.todolist.data.ResetTime
+import com.example.todolist.data.ResetTimeDao
+import com.example.todolist.data.Task
+import com.example.todolist.data.TaskDao
+import com.example.todolist.data.TaskHistory
+import com.example.todolist.data.TaskHistoryDao
 import com.example.todolist.data.Todolist
 import com.example.todolist.data.TodolistDao
 import kotlinx.coroutines.CoroutineScope

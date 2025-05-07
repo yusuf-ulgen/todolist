@@ -2,7 +2,10 @@ package com.example.todolist
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -13,6 +16,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.data.Todolist
 import com.example.todolist.data.TodolistDao
 import com.example.todolist.databinding.ActivityListelerimBinding
+import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,6 +73,31 @@ class ListelerimActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadLists()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, Settings::class.java))
+                true
+            }
+            R.id.action_feedback -> {
+                showFeedbackDialog()   // Aynı metodu kullanabilirsiniz
+                true
+            }
+            R.id.action_logout -> {
+                FirebaseAuth.getInstance().signOut()
+                startActivity(Intent(this, Giris::class.java))
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun loadLists() {
@@ -164,5 +196,66 @@ class ListelerimActivity : AppCompatActivity() {
             // Listeden silinen öğeyi UI'dan kaldır
             loadLists()  // Listeyi tekrar yükleyelim
         }
+    }
+
+    private fun showFeedbackDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
+        val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
+        val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Problem Başlığı")
+            .setView(dialogView)
+            .setPositiveButton("İleri") { _, _ ->
+                val title = titleEditText.text.toString().trim()
+                val message = messageEditText.text.toString().trim()
+
+                // Hataları EditText üzerinde göster
+                var valid = true
+                if (title.isEmpty()) {
+                    titleEditText.error = "Lütfen bir başlık girin!"
+                    titleEditText.requestFocus()
+                    valid = false
+                }
+                if (message.isEmpty()) {
+                    messageEditText.error = "Lütfen probleminizi girin!"
+                    if (valid) messageEditText.requestFocus()
+                    valid = false
+                }
+                if (!valid) return@setPositiveButton
+
+                showSubmitFeedbackDialog(title, message)
+            }
+            .setNegativeButton("İptal", null)
+            .show()
+    }
+
+    private fun showSubmitFeedbackDialog(title: String, message: String) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Geri Bildirim")
+            .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
+            .setPositiveButton("Gönder") { _, _ ->
+                // Firestore referansı
+                val db = Firebase.firestore
+                // Belge verisi
+                val data = mapOf(
+                    "title"     to title,
+                    "message"   to message,
+                    "timestamp" to System.currentTimeMillis(),
+                    "userId"    to FirebaseAuth.getInstance().currentUser?.uid,
+                    "userEmail" to FirebaseAuth.getInstance().currentUser?.email
+                )
+                // yaz
+                db.collection("feedbacks")
+                    .add(data)
+                    .addOnSuccessListener {
+                        Snackbar.make(binding.root, "Geri bildiriminiz gönderildi!", Snackbar.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e ->
+                        Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
+                    }
+            }
+            .setNegativeButton("İptal", null)
+            .show()
     }
 }

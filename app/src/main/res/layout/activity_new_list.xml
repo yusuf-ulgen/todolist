@@ -55,5 +55,4 @@
             app:backgroundTint="@color/creamPrimaryVariant"
             android:textColor="@color/creamOnPrimary"/>
     </LinearLayout>
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
