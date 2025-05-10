@@ -196,12 +196,12 @@ class TaskAdapter(
     override fun getItemCount() = tasks.size
 
     fun moveItem(from: Int, to: Int) {
-        val task = tasks.removeAt(from)
-        tasks.add(to, task)
+        // 1) Öğeyi listeden al
+        val item = tasks.removeAt(from)
+        // 2) Yeni pozisyona koy
+        tasks.add(to, item)
+        // 3) RecyclerView’a bildir
         notifyItemMoved(from, to)
-        GlobalScope.launch(Dispatchers.IO) {
-            tasks.forEachIndexed { index, t -> t.sortOrder = index; taskDao.updateTask(t) }
-        }
     }
 
     fun deleteItem(position: Int) {

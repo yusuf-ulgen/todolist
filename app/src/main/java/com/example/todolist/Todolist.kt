@@ -6,5 +6,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "lists")
 data class Todolist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String
+    val name: String,
+    var sortOrder: Int = 0
 )

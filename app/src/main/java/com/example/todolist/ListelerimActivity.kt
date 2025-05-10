@@ -4,13 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.data.Todolist
@@ -23,51 +21,91 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Collections
 
 class ListelerimActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityListelerimBinding
     private lateinit var listDao: TodolistDao
-    private lateinit var recyclerView: RecyclerView
-    private var lists: List<Todolist> = emptyList()  // Listeleri tutacak bir değişken
+    private lateinit var adapter: ListelerimAdapter
+    private val lists = mutableListOf<Todolist>()
 
     companion object {
-        const val DEFAULT_LIST_ID   = 1L
+        const val DEFAULT_LIST_ID = 1L
         private const val DEFAULT_LIST_NAME = "GÜNLÜK/HAFTALIK"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Tema’yı uygula
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
         super.onCreate(savedInstanceState)
         binding = ActivityListelerimBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-
-        // DAO al
+        // DAO
         listDao = AppDatabase.getDatabase(this).todolistDao()
 
-        // Sabit "To-Do List" butonu: default liste
-        binding.buttonTodolist.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java))
+        // RecyclerView + Adapter
+        adapter = ListelerimAdapter(
+            lists,
+            onClick = { todo ->
+                Intent(this, MainActivity::class.java).apply {
+                    putExtra("listId", todo.id)
+                    putExtra("listName", todo.name)
+                    startActivity(this)
+                }
+            },
+            onLongClick = { todo ->
+                if (todo.id != DEFAULT_LIST_ID) confirmAndDelete(todo)
+            }
+        )
+        binding.recyclerView.apply {
+            layoutManager = LinearLayoutManager(this@ListelerimActivity)
+            adapter = this@ListelerimActivity.adapter
         }
 
-        // Veritabanından listeleri yükle ve butonlarını ekle
-        loadLists()
+        // Default liste butonu
+        binding.buttonTodolist.setOnClickListener {
+            Intent(this, MainActivity::class.java).also {
+                it.putExtra("listId", DEFAULT_LIST_ID)
+                it.putExtra("listName", DEFAULT_LIST_NAME)
+                startActivity(it)
+            }
+        }
 
-        // FAB'a basınca NewListActivity (yeni liste oluşturma ekranı) açılsın
+        // Drag & drop
+        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+        ) {
+            override fun onMove(
+                rv: RecyclerView,
+                vh: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val from = vh.adapterPosition
+                val to = target.adapterPosition
+                // Default listeyi taşıma
+                if (lists[from].id == DEFAULT_LIST_ID || lists[to].id == DEFAULT_LIST_ID) {
+                    return false
+                }
+                Collections.swap(lists, from, to)
+                adapter.notifyItemMoved(from, to)
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    lists.forEachIndexed { idx, todoList ->
+                        todoList.sortOrder = idx
+                        }
+                    listDao.updateList(*lists.toTypedArray())
+                    }
+                return true
+            }
+            override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) = Unit
+        }).attachToRecyclerView(binding.recyclerView)
+
+        // Yeni liste oluşturma
         binding.fab.setOnClickListener {
             startActivity(Intent(this, NewListActivity::class.java))
         }
-
-        recyclerView.adapter = ListelerimAdapter(lists) { position ->
-            if (lists[position].id == 1L) return@ListelerimAdapter
-            showDeleteConfirmationDialog(position)
-        }
-        loadLists()
     }
 
     override fun onResume() {
@@ -75,187 +113,93 @@ class ListelerimActivity : AppCompatActivity() {
         loadLists()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
+    override fun onCreateOptionsMenu(menu: Menu) = menuInflater.inflate(R.menu.menu_main, menu).let { true }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                startActivity(Intent(this, Settings::class.java))
-                true
-            }
-            R.id.action_feedback -> {
-                showFeedbackDialog()   // Aynı metodu kullanabilirsiniz
-                true
-            }
-            R.id.action_logout -> {
-                FirebaseAuth.getInstance().signOut()
-                startActivity(Intent(this, Giris::class.java))
-                finish()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        R.id.action_settings -> {
+            startActivity(Intent(this, Settings::class.java))
+            true
         }
+        R.id.action_feedback -> {
+            showFeedbackDialog()
+            true
+        }
+        R.id.action_logout -> {
+            FirebaseAuth.getInstance().signOut()
+            startActivity(Intent(this, Giris::class.java))
+            finish()
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
     }
 
     private fun loadLists() {
         lifecycleScope.launch {
-            // 1) IO thread’inde önce tabloyu kontrol edelim
             withContext(Dispatchers.IO) {
-                val all = listDao.getAllLists()
-                if (all.isEmpty()) {
-                    // boşsa default listeyi ekle
+                if (listDao.getAllLists().isEmpty()) {
                     listDao.insertList(Todolist(name = DEFAULT_LIST_NAME))
                 }
             }
-
-            // 2) sonra tekrar çek ve ekle
-            lists = withContext(Dispatchers.IO) {
-                listDao.getAllLists()
-            }
-
-            // 3) UI’ı güncelle
-            binding.buttonContainer.removeAllViews()
-            lists.forEach { todoList ->
-                addListButton(todoList)
-            }
+            val all = withContext(Dispatchers.IO) { listDao.getAllLists() }
+            lists.clear()
+            // Default liste hariç diğer tüm listeleri ekle
+            lists.addAll(all.filter { it.id != DEFAULT_LIST_ID })
+            adapter.notifyDataSetChanged()
         }
     }
 
-    private fun onListItemClick(listId: Long) {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.putExtra("listId", listId) // Yeni listeyi MainActivity'ye gönder
-        startActivity(intent)
-    }
-
-    private fun addListButton(todoList: Todolist) {
-        val marginPx = (16 * resources.displayMetrics.density).toInt()
-        val btn = Button(this).apply {
-            text = todoList.name
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = marginPx }
-
-            // Kısa tık: listeyi aç
-            setOnClickListener {
-                Intent(this@ListelerimActivity, MainActivity::class.java).also { intent ->
-                    intent.putExtra("listId", todoList.id)
-                    intent.putExtra("listName", todoList.name)
-                    startActivity(intent)
-                }
-            }
-
-            // Sadece DEFAULT_LIST_ID olmayanlara uzun basma ekle
-            if (todoList.id != DEFAULT_LIST_ID) {
-                setOnLongClickListener {
-                    AlertDialog.Builder(this@ListelerimActivity)
-                        .setTitle("Silme Onayı")
-                        .setMessage("“${todoList.name}” listesini silmek istediğinize emin misiniz?")
-                        .setPositiveButton("Evet") { _, _ ->
-                            lifecycleScope.launch {
-                                withContext(Dispatchers.IO) {
-                                    listDao.delete(todoList)
-                                }
-                                loadLists()
-                            }
-                        }
-                        .setNegativeButton("Hayır", null)
-                        .show()
-                    true
-                }
-            }
-        }
-        binding.buttonContainer.addView(btn)
-    }
-
-    fun showDeleteConfirmationDialog(position: Int) {
+    private fun confirmAndDelete(todo: Todolist) {
         AlertDialog.Builder(this)
             .setTitle("Silme Onayı")
-            .setMessage("Bu listeyi silmek istediğinizden emin misiniz?")
+            .setMessage("“${todo.name}” listesini silmek istediğinize emin misiniz?")
             .setPositiveButton("Evet") { _, _ ->
-                deleteList(position)  // Position parametresi ile listeyi sil
+                lifecycleScope.launch(Dispatchers.IO) {
+                    listDao.delete(todo)
+                    loadLists()
+                }
             }
             .setNegativeButton("Hayır", null)
             .show()
     }
 
-
-    fun deleteList(position: Int) {
-        val listToDelete = lists[position]  // Bu listedeki öğeyi alıyoruz
-        if (listToDelete.id == 1L) {
-            Toast.makeText(this, "Varsayılan liste silinemez", Toast.LENGTH_SHORT).show()
-            return
-        }
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                listDao.delete(listToDelete) // Veritabanından silme işlemi
-            }
-            // Listeden silinen öğeyi UI'dan kaldır
-            loadLists()  // Listeyi tekrar yükleyelim
-        }
-    }
-
     private fun showFeedbackDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
-        val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
-        val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
+        val view = layoutInflater.inflate(R.layout.feedback_dialog, null)
+        val titleEt = view.findViewById<EditText>(R.id.feedbackTitleEditText)
+        val msgEt = view.findViewById<EditText>(R.id.feedbackMessageEditText)
 
-        android.app.AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle("Problem Başlığı")
-            .setView(dialogView)
+            .setView(view)
             .setPositiveButton("İleri") { _, _ ->
-                val title = titleEditText.text.toString().trim()
-                val message = messageEditText.text.toString().trim()
-
-                // Hataları EditText üzerinde göster
-                var valid = true
-                if (title.isEmpty()) {
-                    titleEditText.error = "Lütfen bir başlık girin!"
-                    titleEditText.requestFocus()
-                    valid = false
+                val title = titleEt.text.toString().trim()
+                val msg = msgEt.text.toString().trim()
+                if (title.isEmpty() || msg.isEmpty()) {
+                    if (title.isEmpty()) titleEt.error = "Başlık girin"
+                    if (msg.isEmpty()) msgEt.error = "Mesaj girin"
+                    return@setPositiveButton
                 }
-                if (message.isEmpty()) {
-                    messageEditText.error = "Lütfen probleminizi girin!"
-                    if (valid) messageEditText.requestFocus()
-                    valid = false
-                }
-                if (!valid) return@setPositiveButton
-
-                showSubmitFeedbackDialog(title, message)
+                submitFeedback(title, msg)
             }
             .setNegativeButton("İptal", null)
             .show()
     }
 
-    private fun showSubmitFeedbackDialog(title: String, message: String) {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Geri Bildirim")
-            .setMessage("Başlık: $title\nProblem: $message\n\nGöndermek istiyor musunuz?")
-            .setPositiveButton("Gönder") { _, _ ->
-                // Firestore referansı
-                val db = Firebase.firestore
-                // Belge verisi
-                val data = mapOf(
-                    "title"     to title,
-                    "message"   to message,
-                    "timestamp" to System.currentTimeMillis(),
-                    "userId"    to FirebaseAuth.getInstance().currentUser?.uid,
-                    "userEmail" to FirebaseAuth.getInstance().currentUser?.email
-                )
-                // yaz
-                db.collection("feedbacks")
-                    .add(data)
-                    .addOnSuccessListener {
-                        Snackbar.make(binding.root, "Geri bildiriminiz gönderildi!", Snackbar.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener { e ->
-                        Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
-                    }
+    private fun submitFeedback(title: String, message: String) {
+        val db = Firebase.firestore
+        val data = mapOf(
+            "title" to title,
+            "message" to message,
+            "timestamp" to System.currentTimeMillis(),
+            "userId" to FirebaseAuth.getInstance().currentUser?.uid,
+            "userEmail" to FirebaseAuth.getInstance().currentUser?.email
+        )
+        db.collection("feedbacks")
+            .add(data)
+            .addOnSuccessListener {
+                Snackbar.make(binding.root, "Geri bildiriminiz gönderildi!", Snackbar.LENGTH_SHORT).show()
             }
-            .setNegativeButton("İptal", null)
-            .show()
+            .addOnFailureListener { e ->
+                Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
+            }
     }
 }

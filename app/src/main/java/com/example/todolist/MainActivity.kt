@@ -39,6 +39,7 @@ import java.util.Calendar
 import java.util.Locale
 import android.graphics.Color
 import android.view.View
+import androidx.lifecycle.lifecycleScope
 import com.example.todolist.data.DailyStat
 import com.example.todolist.data.ResetTimeDao
 import com.example.todolist.data.Task
@@ -245,29 +246,34 @@ class MainActivity : AppCompatActivity() {
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                vh: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 if (isMoving) return false
                 isMoving = true
 
                 val from = vh.adapterPosition
-                val to = target.adapterPosition
+                val to   = target.adapterPosition
                 val list = adapter.getTasks()
                 val pinnedCount = list.count { it.isPinned }
 
                 if ((from < pinnedCount && to < pinnedCount) ||
                     (from >= pinnedCount && to >= pinnedCount)
-                ) {
+                    ) {
+                    // 1) UI’da taşı
                     adapter.moveItem(from, to)
+                    // 2) Yeni sortOrder’ları ayarla
+                    adapter.getTasks().forEachIndexed { idx, task ->
+                        task.sortOrder = idx
+                        }
+                                        // 3) DB’ye kalıcı yaz
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        adapter.getTasks().forEach { taskDao.updateTask(it) }
+                        }
                     scheduleMoveReset()
                     return true
-                }
+                    }
                 scheduleMoveReset()
                 return false
-            }
+                }
 
             override fun clearView(
                 recyclerView: RecyclerView,
@@ -314,14 +320,37 @@ class MainActivity : AppCompatActivity() {
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
         ) {
-            override fun onMove(
-                rv: RecyclerView,
-                vh: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ) = false
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                val from = vh.adapterPosition
+                val to   = target.adapterPosition
+
+                if (isMoving) return false
+                isMoving = true
+                val list = adapter.getTasks()
+                val pinnedCount = list.count { it.isPinned }
+                if ((from < pinnedCount && to < pinnedCount) ||
+                    (from >= pinnedCount && to >= pinnedCount)
+                    ) {
+                    // 1) UI’da taşı
+                    weeklyAdapter.moveItem(from, to)
+                    // 2) Her öğeye yeni sortOrder ata
+                    weeklyAdapter.getTasks().forEachIndexed { idx, task ->
+                        task.sortOrder = idx
+                        }
+                    // 3) DB’ye yaz
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        weeklyAdapter.getTasks().forEach { taskDao.updateTask(it) }
+                        }
+                    scheduleMoveReset()
+                    return true
+                    }
+                scheduleMoveReset()
+                return false
+                }
 
             override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
                 super.clearView(rv, vh)
+                // taşıma sonrası trigger için
                 weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount)
             }
 
@@ -445,7 +474,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.includeWeekly).visibility = View.GONE
 
         // Günlük listeyi yeniden yükle ve istatistiği güncelle
-        loadTasks()
+        loadTasks(scrollToEnd = false)
         updateTaskStats()
     }
 
@@ -464,7 +493,7 @@ class MainActivity : AppCompatActivity() {
                 calendarAdapter.selectDay(currentSelectedDow)
                 binding.includeWeekly.weeklyCalendarRecyclerView.scrollToPosition(pos)
                 // ve seçilen günün görevlerini yükle
-                loadWeeklyTasksForDay(currentSelectedDow)
+                loadWeeklyTasksForDay(currentSelectedDow, scrollToEnd = false)
             }
         }
     }
@@ -500,13 +529,21 @@ class MainActivity : AppCompatActivity() {
         binding.includeWeekly.weeklyStatTextView.text = "Haftalık: 0/0"
     }
 
-    private fun loadWeeklyTasksForDay(dow: DayOfWeek) {
+    private fun loadWeeklyTasksForDay(dow: DayOfWeek, scrollToEnd: Boolean = false) {
         currentSelectedDow = dow
         GlobalScope.launch(Dispatchers.IO) {
             val weekly = taskDao.getTasksByWeekday(FirebaseAuth.getInstance().currentUser!!.uid, dow.name)
             withContext(Dispatchers.Main) {
-                weeklyAdapter.setTasks(weekly)
+                val (pinnedW, restW) = weekly.partition { it.isPinned }
+                weeklyAdapter.setTasks(pinnedW + restW)
                 updateWeeklyStats()
+                // Eğer scrollToEnd=true ise en son elemana kaydır
+                if (scrollToEnd && weekly.isNotEmpty()) {
+                    binding.includeWeekly.weeklyTasksRecyclerView.post {
+                        binding.includeWeekly.weeklyTasksRecyclerView
+                            .scrollToPosition(weekly.lastIndex)
+                    }
+                }
             }
         }
         updateWeeklyStats()
@@ -517,11 +554,20 @@ class MainActivity : AppCompatActivity() {
         task.listId = listId // listId'yi ekliyoruz
 
         GlobalScope.launch(Dispatchers.IO) {
+            // Mevcut haftalık görevler o güne ait
+            val existing = taskDao.getTasksByWeekday(
+                FirebaseAuth.getInstance().currentUser!!.uid,
+                selectedDayOfWeek.name
+                        )
+            task.sortOrder = existing.size
+            task.weekday = selectedDayOfWeek.name
+            task.listId = listId
+
             taskDao.insertTask(task)
             withContext(Dispatchers.Main) {
-                loadWeeklyTasksForDay(selectedDayOfWeek)
+                loadWeeklyTasksForDay(selectedDayOfWeek, scrollToEnd = true)
+                }
             }
-        }
     }
 
     private fun showNotificationChoice(onChosen: (kind: Int) -> Unit) {
@@ -558,6 +604,7 @@ class MainActivity : AppCompatActivity() {
 
         GlobalScope.launch(Dispatchers.IO) {
             val currentList = taskDao.getTasksByListId(currentListId)
+            val dailyOnly = currentList.filter { it.weekday.isNullOrBlank() }
 
             // Eğer liste boşsa
             if (currentList.isEmpty()) {
@@ -566,7 +613,8 @@ class MainActivity : AppCompatActivity() {
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    tasks = currentList
+                    val (pinned, rest) = dailyOnly.partition { it.isPinned }
+                    tasks = pinned + rest
                     adapter.setTasks(tasks)
                     if (scrollToEnd && tasks.isNotEmpty()) {
                         // Yeni eklenen göreve kadar kaydırma işlemi
@@ -583,8 +631,11 @@ class MainActivity : AppCompatActivity() {
         task.listId = listId // Assigning the listId
 
         GlobalScope.launch(Dispatchers.IO) {
-            val existing = taskDao.getTasksByUserId(currentUser?.uid ?: "") // Safely using currentUser's UID
+            // Mevcut günlük görevler
+            val existing: List<Task> = taskDao.getTasksByListId(listId)
+            // En sona at
             task.sortOrder = existing.size
+            task.weekday = ""  // günlük olduğundan weekday boş
 
             // Checking if there's a conflict with the time for the task
             if (task.time.isNotBlank() && task.time != "Saat") {
