@@ -4,21 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/creamBackground"
+    android:background="?attr/colorSurface"
     tools:context=".NewListActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Toolbar -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="Yeni Liste"
-            app:backgroundTint="@color/creamPrimary"
-            app:titleTextColor="@color/creamOnPrimary"/>
+            app:backgroundTint="?attr/colorPrimary"
+            app:titleTextColor="?attr/colorOnPrimary"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -27,9 +26,10 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
-        app:srcCompat="@android:drawable/ic_input_add" />
+        app:srcCompat="@android:drawable/ic_input_add"
+        app:backgroundTint="?attr/colorSecondary"
+        app:tint="?attr/colorOnSecondary"/>
 
-    <!-- İçerik -->
     <LinearLayout
         android:orientation="vertical"
         android:padding="16dp"
@@ -37,22 +37,22 @@
         android:layout_height="wrap_content"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Kullanıcının gireceği liste adı -->
         <EditText
             android:id="@+id/listNameEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Liste adı girin"
-            android:inputType="textPersonName"/>
+            android:inputType="textPersonName"
+            android:textColor="?attr/colorOnBackground"
+            android:textColorHint="?attr/colorOnBackground"/>
 
-        <!-- Oluştur butonu -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/createButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Oluştur"
-            app:backgroundTint="@color/creamPrimaryVariant"
-            android:textColor="@color/creamOnPrimary"/>
+            app:backgroundTint="?attr/colorPrimaryVariant"
+            android:textColor="?attr/colorOnPrimary"/>
     </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

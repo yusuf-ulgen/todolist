@@ -5,14 +5,14 @@
     android:padding="12dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/creamBackground">
+    android:background="?attr/colorSurface">
 
     <CheckBox
         android:id="@+id/doneCheck"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="false"
-        android:tint="@color/creamPrimary"/>
+        android:tint="?attr/colorPrimary"/>
 
     <TextView
         android:id="@+id/contentText"
@@ -21,7 +21,7 @@
         android:layout_weight="1"
         android:paddingStart="8dp"
         android:text="Görev içeriği"
-        android:textColor="@color/creamOnBackground"
+        android:textColor="?attr/colorOnBackground"
         android:textSize="16sp"/>
 
     <TextView
@@ -29,7 +29,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="12:30"
-        android:textColor="@color/creamPrimaryVariant"
+        android:textColor="?attr/colorPrimaryVariant"
         android:textSize="14sp"/>
 
 </LinearLayout>

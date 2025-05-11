@@ -2,73 +2,71 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/creamBackground"
-    tools:context=".MainActivity">
+    android:background="?android:attr/colorBackground">
 
+    <!-- Toolbar + TabLayout -->
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Mevcut Toolbar -->
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
-            app:backgroundTint="@color/creamPrimary"
-            app:subtitleTextColor="@color/creamOnPrimary"
+            app:backgroundTint="?attr/colorPrimary"
+            app:subtitleTextColor="?attr/colorOnPrimary"
             app:subtitleTextAppearance="@style/SubtitleLarge"
-            app:subtitleCentered="true" />
+            app:subtitleCentered="true"/>
 
-        <!-- Görsel TabLayout -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:tabMode="fixed"
             app:tabGravity="fill"
-            app:tabIndicatorColor="@color/creamOnPrimary"
+            app:tabIndicatorColor="?attr/colorOnPrimary"
             app:tabTextColor="?attr/tabUnselectedTextColor"
             app:tabSelectedTextColor="?attr/tabSelectedTextColor">
 
             <com.google.android.material.tabs.TabItem
-                android:layout_width="wrap_content"
+                android:text="Günlük"
                 android:layout_height="wrap_content"
-                android:text="Günlük" />
+                android:layout_width="wrap_content" />
 
             <com.google.android.material.tabs.TabItem
+                android:text="Haftalık"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Haftalık" />
+                android:layout_height="wrap_content" />
         </com.google.android.material.tabs.TabLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- İçerikler -->
     <include
         android:id="@+id/includeDaily"
-        layout="@layout/content_main" />
+        layout="@layout/content_main"/>
 
     <include
         android:id="@+id/includeWeekly"
         layout="@layout/content_weekly"
-        android:visibility="gone" />
+        android:visibility="gone"/>
 
     <!-- FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
         app:srcCompat="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/creamPrimaryVariant"
-        app:tint="@color/creamOnPrimary"/>
+        app:backgroundTint="?attr/colorPrimaryVariant"
+        android:tint="?attr/colorOnPrimary"/>
 
-    <!-- İstatistik Metni (isteğe bağlı yerleştirme) -->
+    <!-- İstatistik metni (toolbar altında) -->
     <TextView
         android:id="@+id/toolbarStatText"
         android:layout_width="match_parent"
@@ -78,8 +76,8 @@
         android:text="Bugünün görevleri 0/0"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@color/creamOnBackground"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_anchor="@id/toolbar"
-        app:layout_anchorGravity="bottom|end"/>
+        app:layout_anchorGravity="bottom"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

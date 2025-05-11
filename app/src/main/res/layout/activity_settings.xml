@@ -7,7 +7,6 @@
     android:background="?android:attr/colorBackground"
     android:padding="16dp">
 
-    <!-- Tema Seçimi Butonu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/themeButton"
         android:layout_width="0dp"
@@ -23,7 +22,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Resetleme Zamanı Butonu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/resetTimeButton"
         android:layout_width="0dp"
@@ -39,7 +37,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- İstatistiklerim Butonu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/statisticsButton"
         android:layout_width="0dp"
@@ -55,7 +52,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Şifre Butonu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/changePasswordButton"
         android:layout_width="0dp"
@@ -71,7 +67,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Admin Feedback Butonu -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/feedbackListButton"
         android:layout_width="0dp"
@@ -86,5 +81,4 @@
         app:layout_constraintTop_toBottomOf="@id/changePasswordButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -13,7 +13,7 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:paddingHorizontal="8dp"
-    android:textColor="@color/creamOnBackground"
+    android:textColor="?attr/colorOnBackground"
     android:textSize="14sp"
     android:textStyle="bold"/>
 

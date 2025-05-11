@@ -6,9 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="24dp"
-    android:background="?android:attr/colorBackground">
+    android:background="?attr/colorSurface">
 
-    <!-- Bütün formu saracak ve ortalayacak container -->
     <LinearLayout
         android:id="@+id/container"
         android:layout_width="match_parent"

@@ -5,7 +5,7 @@
     tools:context=".NewListActivity"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/creamBackground">
+    android:background="?attr/colorSurface">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
@@ -15,8 +15,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:backgroundTint="@color/creamPrimary"
-            app:subtitleTextColor="@color/creamOnPrimary"
+            app:backgroundTint="?attr/colorPrimary"
+            app:subtitleTextColor="?attr/colorOnPrimary"
             app:subtitleTextAppearance="@style/SubtitleLarge"
             app:subtitleCentered="true" />
 
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             app:tabMode="fixed"
             app:tabGravity="fill"
-            app:tabIndicatorColor="@color/creamOnPrimary"
+            app:tabIndicatorColor="?attr/colorOnPrimary"
             app:tabTextColor="?attr/tabUnselectedTextColor"
             app:tabSelectedTextColor="?attr/tabSelectedTextColor">
 
@@ -61,8 +61,8 @@
         android:layout_margin="16dp"
         android:layout_gravity="bottom|end"
         app:srcCompat="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/creamPrimaryVariant"
-        app:tint="@color/creamOnPrimary"/>
+        app:backgroundTint="?attr/colorPrimaryVariant"
+        app:tint="?attr/colorOnPrimary"/>
 
     <TextView
         android:id="@+id/toolbarStatText"
@@ -73,7 +73,7 @@
         android:text="Bugünün görevleri 0/0"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@color/creamOnBackground"
+        android:textColor="?attr/colorOnBackground"
         app:layout_anchor="@id/toolbar"
         app:layout_anchorGravity="bottom|end"/>
 

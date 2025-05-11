@@ -1,49 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Uygulamanın ana teması, light ve dark arasında otomatik geçiş yapar -->
+    <!-- Uygulamanın ana teması, DayNight özellikli -->
     <style name="Theme.ToDoList" parent="Theme.MaterialComponents.DayNight.NoActionBar.Bridge">
-        <!-- Toolbar, FAB vb. ana renkler -->
+        <!-- Primary / Secondary -->
         <item name="colorPrimary">@color/creamPrimary</item>
         <item name="colorPrimaryVariant">@color/creamPrimaryVariant</item>
         <item name="colorOnPrimary">@color/creamOnPrimary</item>
-        <item name="android:colorBackground">@color/creamBackground</item>
-        <item name="colorOnBackground">@color/creamOnBackground</item>
 
-        <!-- Secondary renkler (Snackbar, switch thumb vb) -->
-        <item name="colorSecondary">@color/creamPrimary</item>
-        <item name="colorSecondaryVariant">@color/creamPrimaryVariant</item>
+        <item name="colorSecondary">@color/colorAccent</item>
         <item name="colorOnSecondary">@color/creamOnPrimary</item>
-        <!-- Accent olarak da artık aqua #00BFA5 kullanılacak -->
 
-        <!-- Uygulama arka planı ve üzerine yazı -->
-        <item name="android:windowBackground">@color/creamBackground</item>
+        <!-- Arka plan & yüzeyler -->
+        <item name="android:colorBackground">@color/creamBackground</item>
         <item name="colorSurface">@color/creamBackground</item>
+        <item name="colorOnBackground">@color/creamOnBackground</item>
         <item name="colorOnSurface">@color/creamOnBackground</item>
 
-        <!-- Sistem bar renkleri -->
+        <!-- Sistem bar -->
         <item name="android:statusBarColor">@color/creamPrimaryVariant</item>
         <item name="android:navigationBarColor">@color/creamBackground</item>
 
-        <!-- Genel varsayılan metin rengi -->
-        <item name="android:textColorPrimary">@color/creamOnBackground</item>
+        <!-- Metin renkleri -->
+        <item name="android:textColorPrimary">@color/task_text_default</item>
+        <item name="android:textColorSecondary">@color/gray</item>
 
-        <item name="pinIcon">@drawable/pin_light</item>
+        <!-- Accent / ripple vb -->
+        <item name="colorAccent">@color/colorAccent</item>
 
+        <!-- TabLayout için text renkleri (app:tabTextColors="?attr/tabTextColor") -->
         <item name="tabUnselectedTextColor">@color/light_tab_unselected</item>
         <item name="tabSelectedTextColor">@color/light_tab_selected</item>
+        <item name="tabIndicatorColor">@color/colorAccent</item>
 
+        <item name="taskTextDefault">@color/task_text_default</item>
+        <item name="taskTextChecked">@color/task_text_checked</item>
+
+        <!-- Pin ikonu -->
+        <item name="pinIcon">@drawable/pin_light</item>
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="android:layout_width">match_parent</item>
+        <!-- Bu iki özellik TextAppearance içinde pek kullanılmaz, ama sen eklemiştin -->
         <item name="android:gravity">center</item>
         <item name="android:textSize">18sp</item>
-    </style>
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ToDoList" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
 </resources>

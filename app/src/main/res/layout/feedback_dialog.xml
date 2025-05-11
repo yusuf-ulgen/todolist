@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/creamBackground"
+    android:background="?attr/colorSurface"
     android:padding="16dp">
 
     <!-- Problem Başlığı -->
@@ -14,7 +14,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:boxBackgroundMode="outline"
-        app:boxStrokeColor="@color/creamPrimaryVariant"
+        app:boxStrokeColor="?attr/colorPrimaryVariant"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -25,8 +25,8 @@
             android:layout_height="wrap_content"
             android:hint="Problem Başlığı"
             android:inputType="textCapSentences"
-            android:textColor="@color/creamOnBackground"
-            android:textColorHint="@color/creamOnBackground" />
+            android:textColor="?attr/colorOnBackground"
+            android:textColorHint="?attr/colorOnBackground" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Problem Mesajı -->

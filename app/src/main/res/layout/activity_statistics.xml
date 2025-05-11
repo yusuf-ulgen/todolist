@@ -4,10 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/stat_bg_light"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="?android:attr/colorBackground">
 
-    <!-- Başlık -->
     <TextView
         android:id="@+id/titleText"
         android:layout_width="0dp"
@@ -16,12 +15,11 @@
         android:text="Son 30 Günün İstatistikleri"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="@color/stat_text_light"
+        android:textColor="?attr/colorOnBackground"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- İstatistikler listesini gösteren RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/statsRecycler"
         android:layout_width="0dp"
@@ -32,5 +30,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
