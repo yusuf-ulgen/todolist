@@ -707,6 +707,10 @@ class MainActivity : AppCompatActivity() {
     private fun updateWeeklyStats() {
         val total = weeklyAdapter.getTasks().size
         val done  = weeklyAdapter.getTasks().count { it.isChecked }
+
+        supportActionBar?.subtitle =
+            "Haftalık (${currentSelectedDow.getDisplayName(TextStyle.SHORT, Locale.getDefault())}): $done/$total"
+
         binding.includeWeekly.weeklyStatTextView.text =
             "${currentSelectedDow.getDisplayName(TextStyle.SHORT, Locale.getDefault())}: $done/$total"
 
@@ -835,53 +839,52 @@ class MainActivity : AppCompatActivity() {
         GlobalScope.launch(Dispatchers.IO) {
             val resetTime = resetTimeDao.getResetTime() ?: return@launch
 
+            // Şu an
             val now = Calendar.getInstance()
-            val h = now.get(Calendar.HOUR_OF_DAY)
-            val m = now.get(Calendar.MINUTE)
-            val nowSecond = now.get(Calendar.SECOND)
-
-            // Bugünün anahtarı
-            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                .format(now.time)
-
-            // Daha önce bu gün resetlendi mi?
+            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now.time)
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)
             if (prefs.getString("last_reset_day", "") == todayKey) return@launch
 
-            // Toplam dakikaya çevir ve karşılaştır
-            val nowTotal   = h * 60 + m
+            // Zamanı geçmiş mi?
+            val nowTotal   = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
             val resetTotal = resetTime.resetHour * 60 + resetTime.resetMinute
+            if (nowTotal < resetTotal) return@launch
 
-            if (nowTotal > resetTotal || (nowTotal == resetTotal && nowSecond >= 0)) {
-                // 1) İstatistik kaydet
-                val allTasks  = taskDao.getAllTasks()
-                val completed = allTasks.count { it.isChecked }
-                val total     = allTasks.size
-                db.dailyStatDao().upsert(DailyStat(todayKey, completed, total))
+            // 1) Veritabanından tüm görevleri çek
+            val allTasks = taskDao.getAllTasks()
 
-                // 2) History kaydet
-                val history = allTasks.map {
-                    TaskHistory(
-                        date      = todayKey,
-                        content   = it.content,
-                        time      = it.time,
-                        isChecked = it.isChecked
-                    )
-                }
-                db.taskHistoryDao().insertAll(history)
+            // 2) İstatistik kaydı — sadece günlük için
+            val dailyTasks   = allTasks.filter { it.weekday.isNullOrBlank() }
+            val completedD   = dailyTasks.count { it.isChecked }
+            val totalD       = dailyTasks.size
+            db.dailyStatDao().upsert(DailyStat(todayKey, completedD, totalD))
 
-                // 3) Tümünü sıfırla
-                allTasks.forEach {
-                    it.isChecked = false
-                    taskDao.updateTask(it)
-                }
+            // 3) Görev geçmişine kaydet — burada dilersen sadece günlük ya da hepsini tut
+            val history = dailyTasks.map {
+                TaskHistory(date = todayKey, content = it.content, time = it.time, isChecked = it.isChecked)
+            }
+            db.taskHistoryDao().insertAll(history)
 
-                // 4) Bugün sıfırlandı kaydet
-                prefs.edit().putString("last_reset_day", todayKey).apply()
+            // 4) Günlük görevleri temizle
+            dailyTasks.forEach {
+                it.isChecked = false
+                taskDao.updateTask(it)
+            }
 
-                // 5) UI thread’de listeyi yenile
-                withContext(Dispatchers.Main) {
-                    loadTasks()
+            // 5) Haftalık görevleri temizle — sadece bugünün
+            val todayDow = LocalDate.now().dayOfWeek.name
+            val weeklyToday = allTasks.filter { it.weekday == todayDow }
+            weeklyToday.forEach {
+                it.isChecked = false
+                taskDao.updateTask(it)
+            }
+
+            // 6) Kaydı al ve UI’yi yenile
+            prefs.edit().putString("last_reset_day", todayKey).apply()
+            withContext(Dispatchers.Main) {
+                loadTasks()           // günlük view
+                if (findViewById<View>(R.id.includeWeekly).visibility == View.VISIBLE) {
+                    loadWeeklyTasksForDay(LocalDate.now().dayOfWeek, scrollToEnd = false)
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
@@ -40,34 +41,45 @@ class ResetTimeActivity : AppCompatActivity() {
                 ?.setTextColor(color)
         }
 
-        // 2) Daha önce kaydedilen saati oku ve göster
+        // Spinner varsayılan değerini yükleyelim:
         GlobalScope.launch(Dispatchers.IO) {
             resetTimeDao.getResetTime()?.let { saved ->
                 withContext(Dispatchers.Main) {
+                    // Saat/dakika gösterimi
                     showSavedTime(saved.resetHour, saved.resetMinute)
                     binding.timePicker.hour   = saved.resetHour
                     binding.timePicker.minute = saved.resetMinute
+                    // Spinner’da kaydedilmiş günü seç
+                    binding.weekDaySpinner.setSelection(saved.resetDay)
                 }
             }
         }
 
-        // 3) Kaydet butonu
         binding.saveResetTimeButton.setOnClickListener {
             val hour   = binding.timePicker.hour
             val minute = binding.timePicker.minute
+            val dayPos = binding.weekDaySpinner.selectedItemPosition
 
-            // a) Room'a upsert et
+            // 1) Room’a upsert et (yeni alanla birlikte)
             GlobalScope.launch(Dispatchers.IO) {
-                resetTimeDao.upsert( ResetTime(resetHour = hour, resetMinute = minute) )
+                resetTimeDao.upsert(
+                    ResetTime(
+                        id = 0,
+                        resetHour   = hour,
+                        resetMinute = minute,
+                        resetDay    = dayPos
+                    )
+                )
             }
 
-            // b) Alarm'ı (yeniden) planla
-            scheduleDailyResetAlarm(hour, minute)
+            // 2) Haftalık alarmı planla
+            scheduleWeeklyResetAlarm(hour, minute, dayPos)
 
-            // c) Kullanıcıya bilgi ver
+            // 3) Geri bildirim
             Toast.makeText(
                 this,
-                "Reset saati kaydedildi: %02d:%02d".format(hour, minute),
+                "Reset saati kaydedildi: %02d:%02d, ${binding.weekDaySpinner.selectedItem}"
+                    .format(hour, minute),
                 Toast.LENGTH_SHORT
             ).show()
             showSavedTime(hour, minute)
@@ -78,8 +90,9 @@ class ResetTimeActivity : AppCompatActivity() {
         binding.savedResetTimeValue.text = "%02d:%02d".format(hour, minute)
     }
 
-    private fun scheduleDailyResetAlarm(resetHour: Int, resetMinute: Int) {
-        // Android 12+ exact alarm izni
+    @SuppressLint("ScheduleExactAlarm")
+    private fun scheduleWeeklyResetAlarm(resetHour: Int, resetMinute: Int, resetDay: Int) {
+        // Android 12+ izin kontrolü
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!am.canScheduleExactAlarms()) {
@@ -95,27 +108,39 @@ class ResetTimeActivity : AppCompatActivity() {
             }
         }
 
-        // AlarmManager ve PendingIntent oluştur
         val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, ResetReceiver::class.java)
         val pi = PendingIntent.getBroadcast(
-            this,
-            0,
-            intent,
+            this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Hedef zamanı hesapla
+        // Spinner’daki index’e göre Calendar gününü al
+        val dow = when (resetDay) {
+            0 -> Calendar.MONDAY
+            1 -> Calendar.TUESDAY
+            2 -> Calendar.WEDNESDAY
+            3 -> Calendar.THURSDAY
+            4 -> Calendar.FRIDAY
+            5 -> Calendar.SATURDAY
+            6 -> Calendar.SUNDAY
+            else -> Calendar.MONDAY
+        }
+
+        // Şimdiki zaman ve hedef zaman
+        val now = Calendar.getInstance()
         val cal = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_WEEK, dow)
             set(Calendar.HOUR_OF_DAY, resetHour)
             set(Calendar.MINUTE, resetMinute)
             set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) {
-                add(Calendar.DAY_OF_YEAR, 1)
+            // Eğer hedef geçtiyse bir hafta ileri al
+            if (timeInMillis <= now.timeInMillis) {
+                add(Calendar.WEEK_OF_YEAR, 1)
             }
         }
 
-        // Alarmı eksiksiz planla
+        // Haftalık alarm
         am.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             cal.timeInMillis,

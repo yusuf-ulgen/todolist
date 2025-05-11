@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class ResetTime(
     @PrimaryKey val id: Int = 0,        // hep 0
     val resetHour: Int,
-    val resetMinute: Int
+    val resetMinute: Int,
+    val resetDay: Int
 )
