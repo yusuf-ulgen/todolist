@@ -35,4 +35,5 @@
     <color name="dark_tab_unselected">#BBBBBB</color>
     <color name="dark_tab_selected">#90CAF9</color>
 
+    <color name="teal_200">#80CBC4</color>
 </resources>
