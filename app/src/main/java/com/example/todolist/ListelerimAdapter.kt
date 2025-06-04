@@ -9,7 +9,8 @@ import com.example.todolist.databinding.ItemListBinding
 class ListelerimAdapter(
     private val lists: MutableList<Todolist>,
     private val onClick: (Todolist) -> Unit,
-    private val onLongClick: (Todolist) -> Unit
+    private val onLongClick: (Todolist) -> Unit,
+    private val onRenameRequest: (Todolist) -> Unit
 ) : RecyclerView.Adapter<ListelerimAdapter.ListViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
@@ -27,9 +28,25 @@ class ListelerimAdapter(
             text = todo.name
             setOnClickListener { onClick(todo) }
             setOnLongClickListener {
-                onLongClick(todo)
+                val popup = android.widget.PopupMenu(context, this)
+                popup.menuInflater.inflate(R.menu.menu_list_item, popup.menu)
+                popup.setOnMenuItemClickListener {
+                    when (it.itemId) {
+                        R.id.rename_list -> {
+                            onRenameRequest(todo)
+                            true
+                        }
+                        R.id.delete_list -> {
+                            onLongClick(todo)
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                popup.show()
                 true
             }
+
         }
     }
 

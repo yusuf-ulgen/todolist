@@ -23,4 +23,3 @@ interface TodolistDao {
     @Update
     suspend fun updateList(vararg todoLists: Todolist)
 }
-

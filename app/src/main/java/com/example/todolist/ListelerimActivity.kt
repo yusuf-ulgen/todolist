@@ -57,6 +57,9 @@ class ListelerimActivity : AppCompatActivity() {
             },
             onLongClick = { todo ->
                 if (todo.id != DEFAULT_LIST_ID) confirmAndDelete(todo)
+            },
+            onRenameRequest = { todo ->
+                if (todo.id != DEFAULT_LIST_ID) showRenameDialog(todo)
             }
         )
         binding.recyclerView.apply {
@@ -90,6 +93,7 @@ class ListelerimActivity : AppCompatActivity() {
                 }
                 Collections.swap(lists, from, to)
                 adapter.notifyItemMoved(from, to)
+
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     lists.forEachIndexed { idx, todoList ->
@@ -201,5 +205,28 @@ class ListelerimActivity : AppCompatActivity() {
             .addOnFailureListener { e ->
                 Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
             }
+    }
+
+    private fun showRenameDialog(todo: Todolist) {
+        val input = EditText(this)
+        input.setText(todo.name)
+
+        AlertDialog.Builder(this)
+            .setTitle("Listeyi Yeniden Adlandır")
+            .setView(input)
+            .setPositiveButton("Kaydet") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    todo.name = newName
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        listDao.updateList(todo)
+                        withContext(Dispatchers.Main) {
+                            adapter.notifyDataSetChanged()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("İptal", null)
+            .show()
     }
 }

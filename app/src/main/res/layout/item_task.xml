@@ -34,7 +34,7 @@
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- Görev Metni ve Pin Ikonu -->
-    <FrameLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/taskFrame"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -44,32 +44,59 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintWidth_percent="0.58">
 
+        <ImageView
+            android:id="@+id/pinIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="4dp"
+            android:src="?attr/pinIcon"
+            android:contentDescription="@string/pin_icon"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
         <EditText
             android:id="@+id/taskEditText"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:hint="Görev girin..."
             android:textColor="?attr/taskTextDefault"
             android:textColorHint="?attr/taskTextDefault"
             android:backgroundTint="?attr/colorPrimaryVariant"
             android:textSize="16sp"
-            android:padding="8dp"
             android:scrollHorizontally="true"
             android:singleLine="true"
             android:imeOptions="actionDone"
             android:focusable="true"
-            android:focusableInTouchMode="true" />
+            android:visibility="gone"
+            android:focusableInTouchMode="true"
+            android:padding="8dp"
+            app:layout_constraintStart_toEndOf="@id/pinIcon"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <ImageView
-            android:id="@+id/pinIcon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_gravity="start|center_vertical"
-            android:layout_marginStart="4dp"
-            android:src="?attr/pinIcon"
-            android:contentDescription="@string/pin_icon"
-            android:visibility="gone" />
-    </FrameLayout>
+        <TextView
+            android:id="@+id/taskMarqueeText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textColor="?attr/taskTextDefault"
+            android:singleLine="true"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:scrollHorizontally="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:visibility="gone"
+            android:padding="8dp"
+            app:layout_constraintStart_toEndOf="@id/pinIcon"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <!-- Saat -->
     <TextView

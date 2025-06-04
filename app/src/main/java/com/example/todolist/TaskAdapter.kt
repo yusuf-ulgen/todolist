@@ -39,6 +39,13 @@ class TaskAdapter(
         val b = holder.binding
         val ctx = holder.itemView.context
 
+        val isEditing = task.content.isBlank()
+        b.taskEditText.visibility = if (isEditing) View.VISIBLE else View.GONE
+        b.taskMarqueeText.visibility = if (isEditing) View.GONE else View.VISIBLE
+        b.taskMarqueeText.text = task.content
+        b.taskMarqueeText.isSelected = true
+
+
         // 1) İçerik ve Saat
         b.taskEditText.setText(task.content)
         b.timeTextView.text = task.time.takeIf { it.isNotBlank() && it != "Saat" } ?: "Saat"
@@ -120,14 +127,18 @@ class TaskAdapter(
                 } else {
                     task.content = txt
                     GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
-                    notifyItemChanged(position)
-                    onStatsChanged()
                     b.taskEditText.isEnabled = false
+                    b.taskEditText.clearFocus()
+                    b.taskEditText.visibility = View.GONE
+                    b.taskMarqueeText.text = task.content
+                    b.taskMarqueeText.visibility = View.VISIBLE
+                    b.taskMarqueeText.isSelected = true
                     b.taskNumber.visibility = View.VISIBLE
                     b.taskCheckBox.visibility = View.VISIBLE
                     (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                         .hideSoftInputFromWindow(v.windowToken, 0)
-                    b.taskEditText.clearFocus()
+                    notifyItemChanged(position)
+                    onStatsChanged()
                 }
                 true
             } else false
@@ -160,9 +171,11 @@ class TaskAdapter(
                         .setPositiveButton("Evet") { _, _ -> onItemDelete?.invoke(position); onStatsChanged() }
                         .setNegativeButton("Hayır", null).show()
                     "Düzenle" -> {
+                        b.taskEditText.visibility = View.VISIBLE
                         b.taskEditText.isEnabled = true
                         b.taskEditText.requestFocus()
                         b.taskEditText.setSelection(b.taskEditText.text.length)
+                        b.taskMarqueeText.visibility = View.GONE
                     }
                     pinTitle -> {
                         if (task.isPinned) {
