@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.example.todolist
 
 import android.content.Context
@@ -17,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.messaging.FirebaseMessaging
 
+@Suppress("DEPRECATION")
 class Giris : AppCompatActivity() {
 
     private lateinit var binding: ActivityGirisBinding
@@ -106,7 +108,9 @@ class Giris : AppCompatActivity() {
     }
 
     private fun signIn() {
-        startActivityForResult(googleSignInClient.signInIntent, RC_SIGN_IN)
+        googleSignInClient.signOut().addOnCompleteListener {
+            startActivityForResult(googleSignInClient.signInIntent, RC_SIGN_IN)
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

@@ -6,11 +6,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todolist.data.Todolist
 import com.example.todolist.databinding.ActivityNewListBinding
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Suppress("NAME_SHADOWING")
 class NewListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNewListBinding
@@ -21,7 +23,7 @@ class NewListActivity : AppCompatActivity() {
         binding = ActivityNewListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // **Intent ile gelen değerleri burada alıyoruz**
+        // Intent ile gelen değerleri burada alıyoruz
         val currentListId = intent.getLongExtra("listId", 1L)
         val listName      = intent.getStringExtra("listName") ?: "Yeni Liste"
 
@@ -47,6 +49,7 @@ class NewListActivity : AppCompatActivity() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun saveList(listName: String) {
         // Yeni bir liste oluştur
         val newList = Todolist(name = listName) // Burada boş bir liste oluşturuyoruz

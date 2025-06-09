@@ -10,7 +10,7 @@ class TaskHistoryAdapter(
     private val items: List<TaskHistory>
 ): RecyclerView.Adapter<TaskHistoryAdapter.VH>() {
 
-    inner class VH(val b: ItemTaskHistoryBinding): RecyclerView.ViewHolder(b.root) {
+    inner class VH(private val b: ItemTaskHistoryBinding): RecyclerView.ViewHolder(b.root) {
         fun bind(h: TaskHistory) {
             b.doneCheck.isChecked = h.isChecked
             b.contentText.text    = h.content

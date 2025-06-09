@@ -1,13 +1,12 @@
-// app/src/main/java/com/example/todolist/OnboardingActivity.kt
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.example.todolist.databinding.ActivityOnboardingBinding
 import com.google.android.material.tabs.TabLayoutMediator
-import android.util.Log
 
 class OnboardingActivity : AppCompatActivity() {
 
@@ -64,6 +63,7 @@ class OnboardingActivity : AppCompatActivity() {
         }
 
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            @SuppressLint("SetTextI18n")
             override fun onPageSelected(position: Int) {
                 if (position == onboardingAdapter.itemCount - 1) {
                     binding.nextButton.text = "Başla"

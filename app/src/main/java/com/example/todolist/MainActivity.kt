@@ -1,5 +1,7 @@
+@file:Suppress("DEPRECATION")
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.AlertDialog
 import android.app.NotificationChannel
@@ -45,7 +47,10 @@ import com.example.todolist.data.ResetTimeDao
 import com.example.todolist.data.Task
 import com.example.todolist.data.TaskDao
 import com.example.todolist.data.TaskHistory
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.tabs.TabLayout
+import kotlinx.coroutines.DelicateCoroutinesApi
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
@@ -56,8 +61,11 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.concurrent.TimeUnit
 
+@Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
 
+    @SuppressLint("NewApi")
+    private var currentSelectedDow: DayOfWeek = LocalDate.now().dayOfWeek
     private lateinit var binding: ActivityMainBinding
     private lateinit var adapter: TaskAdapter
     private lateinit var db: AppDatabase
@@ -67,13 +75,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifPrefRepo: NotificationPreferenceRepository
     private lateinit var calendarAdapter: CalendarAdapter
     private lateinit var weeklyAdapter: TaskAdapter
-    private var currentSelectedDow: DayOfWeek = LocalDate.now().dayOfWeek
     private var tasks: List<Task> = mutableListOf()
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
     private var currentListId: Long = 1L
     private var listName: String = "GÜNLÜK/HAFTALIK"
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -206,7 +214,7 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = listName
-            subtitle = ""  // veya günlük görev sayısını alt yazı olarak istiyorsan burayı ayarla
+            subtitle = ""  // veya günlük görev sayısını altyazı olarak istiyorsan burayı ayarla
         }
 
         // 3) Eğer özel bir liste (id != 1) ise tabları ve haftalığı kapat:
@@ -264,7 +272,7 @@ class MainActivity : AppCompatActivity() {
                     adapter.getTasks().forEachIndexed { idx, task ->
                         task.sortOrder = idx
                         }
-                                        // 3) DB’ye kalıcı yaz
+                    // 3) DB’ye kalıcı yaz
                     lifecycleScope.launch(Dispatchers.IO) {
                         adapter.getTasks().forEach { taskDao.updateTask(it) }
                         }
@@ -402,14 +410,12 @@ class MainActivity : AppCompatActivity() {
         weeklyAdapter.onItemDelete = { pos ->
             // sadece weeklyAdapter listesinden al
             val deletedTask = weeklyAdapter.getTasks()[pos]
-
             // UI’dan kaldır
             weeklyAdapter.deleteItem(pos)
             // veritabanından sil
             GlobalScope.launch(Dispatchers.IO) {
                 taskDao.deleteTask(deletedTask)
             }
-
             // hemen sayaç güncellensin
             updateWeeklyStats()
 
@@ -463,6 +469,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         finish()
     }
@@ -478,6 +485,7 @@ class MainActivity : AppCompatActivity() {
         updateTaskStats()
     }
 
+    @SuppressLint("NewApi")
     private fun showWeeklyView() {
         findViewById<View>(R.id.includeDaily).visibility = View.GONE
         findViewById<View>(R.id.includeWeekly).visibility = View.VISIBLE
@@ -499,6 +507,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    @SuppressLint("NewApi", "SetTextI18n")
     private fun setupWeeklyCalendar() {
         // 1) Haftanın günleri
         val days = listOf(
@@ -529,6 +538,7 @@ class MainActivity : AppCompatActivity() {
         binding.includeWeekly.weeklyStatTextView.text = "Haftalık: 0/0"
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun loadWeeklyTasksForDay(dow: DayOfWeek, scrollToEnd: Boolean = false) {
         currentSelectedDow = dow
         GlobalScope.launch(Dispatchers.IO) {
@@ -549,6 +559,7 @@ class MainActivity : AppCompatActivity() {
         updateWeeklyStats()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: Long) {
         task.weekday = selectedDayOfWeek.name
         task.listId = listId // listId'yi ekliyoruz
@@ -578,7 +589,7 @@ class MainActivity : AppCompatActivity() {
         )
         AlertDialog.Builder(this)
             .setTitle("Bildirim tercihinizi seçin")
-            .setSingleChoiceItems(options, /*defaultIndex=*/ -1) { dialog, which ->
+            .setSingleChoiceItems(options, -1) { dialog, which ->
                 onChosen(which)
                 dialog.dismiss()
             }
@@ -597,10 +608,8 @@ class MainActivity : AppCompatActivity() {
         checkAndPerformReset()
     }
 
-    private val mAuth = FirebaseAuth.getInstance()
-
+    @OptIn(DelicateCoroutinesApi::class)
     private fun loadTasks(scrollToEnd: Boolean = false) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         GlobalScope.launch(Dispatchers.IO) {
             val currentList = taskDao.getTasksByListId(currentListId)
@@ -625,6 +634,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun addTask(task: Task, listId: Long) {
         val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -704,6 +714,7 @@ class MainActivity : AppCompatActivity() {
         fireDailyConfettiIfNeeded()
     }
 
+    @SuppressLint("NewApi", "SetTextI18n")
     private fun updateWeeklyStats() {
         val total = weeklyAdapter.getTasks().size
         val done  = weeklyAdapter.getTasks().count { it.isChecked }
@@ -716,31 +727,6 @@ class MainActivity : AppCompatActivity() {
 
         fireWeeklyConfettiIfNeeded()
     }
-
-    fun scheduleDailyResetAlarm(context: Context, resetHour: Int, resetMinute: Int) {
-        val intent = Intent(context, ResetReceiver::class.java)
-        val pi = PendingIntent.getBroadcast(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, resetHour)
-            set(Calendar.MINUTE, resetMinute)
-            set(Calendar.SECOND, 0)
-            if (before(Calendar.getInstance())) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
-        }
-
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        am.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            cal.timeInMillis,
-            pi
-        )
-    }
-
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
@@ -767,10 +753,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logOut() {
-        FirebaseAuth.getInstance().signOut()
-        val intent = Intent(this, Giris::class.java)
-        startActivity(intent)
-        finish()
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id)) // kendi client id’niz
+            .requestEmail()
+            .build()
+        val googleClient = GoogleSignIn.getClient(this, gso)
+        googleClient.signOut().addOnCompleteListener {
+            // 2) Sonra Firebase’den çıkış
+            FirebaseAuth.getInstance().signOut()
+            // 3) Giriş ekranına dön
+            startActivity(Intent(this, Giris::class.java))
+            finish()
+        }
     }
 
     private fun showFeedbackDialog() {
@@ -835,6 +829,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     //  Reset kontrol + kayıt + sıfırlama
+    @OptIn(DelicateCoroutinesApi::class)
+    @SuppressLint("NewApi")
     private fun checkAndPerformReset() {
         GlobalScope.launch(Dispatchers.IO) {
             val resetTime = resetTimeDao.getResetTime() ?: return@launch
@@ -904,6 +900,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("NewApi")
     private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
         cancelTaskNotification(task)
         val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -944,6 +941,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun showTimePickerAndSave(task: Task, b: ItemTaskBinding) {
         val calNow = Calendar.getInstance()
         TimePickerDialog(

@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.view.LayoutInflater
@@ -14,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.data.Task
 import com.example.todolist.data.TaskDao
 import com.example.todolist.databinding.ItemTaskBinding
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -34,6 +36,8 @@ class TaskAdapter(
         return TaskViewHolder(binding)
     }
 
+    @SuppressLint("NotifyDataSetChanged", "SetTextI18n")
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
         val task = tasks[position]
         val b = holder.binding
@@ -146,7 +150,7 @@ class TaskAdapter(
 
         // 9) Odaklanınca scroll ve marquee ayarı
         b.taskEditText.isSelected = true
-        b.taskEditText.setOnFocusChangeListener { v, hasFocus ->
+        b.taskEditText.setOnFocusChangeListener { _, hasFocus ->
             b.taskEditText.isCursorVisible = hasFocus
             b.taskEditText.isSelected = hasFocus
             if (hasFocus) {
@@ -157,7 +161,7 @@ class TaskAdapter(
         }
 
         // 10) Satır menüsü (Sil, Düzenle, Başa Sabitle)
-        holder.itemView.setOnClickListener {
+        holder.itemView.setOnClickListener { it ->
             val popup = PopupMenu(ctx, it)
             popup.menu.add("Düzenle")
             popup.menu.add("Sil")
@@ -186,8 +190,8 @@ class TaskAdapter(
                             tasks.add(insertPos, task)
                         } else {
                             val pinnedCount = tasks.count { it.isPinned }
-                            if (pinnedCount >= 5) {
-                                b.taskEditText.error = "En fazla 5 görev sabitlenebilir!"
+                            if (pinnedCount >= 10) {
+                                b.taskEditText.error = "En fazla 10 görev sabitlenebilir!"
                                 b.taskEditText.requestFocus()
                             } else {
                                 task.isPinned = true
@@ -217,6 +221,7 @@ class TaskAdapter(
         notifyItemMoved(from, to)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun deleteItem(position: Int) {
         // 1) Hemen UI’dan çıkar
         val removed = tasks.removeAt(position)
@@ -232,12 +237,13 @@ class TaskAdapter(
         }
     }
 
-    /** Pozisyona göre silinen görevi geri eklemek için: */
+    // Pozisyona göre silinen görevi geri eklemek için
     fun restoreItem(task: Task, position: Int) {
         tasks.add(position, task)
         notifyItemInserted(position)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setTasks(newTasks: List<Task>) {
         tasks = newTasks.toMutableList()
         notifyDataSetChanged()

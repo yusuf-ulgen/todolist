@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.todolist.data.ResetTime
 import com.example.todolist.databinding.ActivityResetTimeBinding
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -27,6 +28,8 @@ class ResetTimeActivity : AppCompatActivity() {
         AppDatabase.getDatabase(applicationContext).resetTimeDao()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
+    @SuppressLint("DiscouragedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityResetTimeBinding.inflate(layoutInflater)
@@ -41,7 +44,7 @@ class ResetTimeActivity : AppCompatActivity() {
                 ?.setTextColor(color)
         }
 
-        // Spinner varsayılan değerini yükleyelim:
+        // Spinner varsayılan derringer yükleyelim:
         GlobalScope.launch(Dispatchers.IO) {
             resetTimeDao.getResetTime()?.let { saved ->
                 withContext(Dispatchers.Main) {
@@ -86,6 +89,7 @@ class ResetTimeActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun showSavedTime(hour: Int, minute: Int) {
         binding.savedResetTimeValue.text = "%02d:%02d".format(hour, minute)
     }

@@ -7,13 +7,7 @@ import com.example.todolist.databinding.ItemAdminFeedbackBinding
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class FeedbackItem(
-    val id: String,
-    val title: String,
-    val message: String,
-    val timestamp: Long,
-    val userEmail: String?
-)
+data class FeedbackItem(val id: String, val title: String, val message: String, val timestamp: Long, val userEmail: String?)
 
 class AdminFeedbackAdapter(
     private var items: List<FeedbackItem>

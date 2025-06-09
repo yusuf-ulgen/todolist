@@ -2,7 +2,6 @@ package com.example.todolist
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.todolist.databinding.ActivityThemeBinding
 
@@ -20,10 +19,9 @@ class ThemeActivity : AppCompatActivity() {
     }
 
     // Beyaz kısma tıklanırsa beyaz tema uygula ve MainActivity'e dön
-    fun onWhiteClick(view: android.view.View) {
+    fun onWhiteClick() {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_LIGHT)
         ThemeHelper.applyTheme(ThemeHelper.THEME_LIGHT)
-        Toast.makeText(this, "Açık tema seçildi", Toast.LENGTH_SHORT).show()
         val intent = Intent(this, ListelerimActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
@@ -32,10 +30,9 @@ class ThemeActivity : AppCompatActivity() {
     }
 
     // Siyah kısma tıklanırsa siyah tema uygula ve MainActivity'e dön
-    fun onBlackClick(view: android.view.View) {
+    fun onBlackClick() {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_DARK)
         ThemeHelper.applyTheme(ThemeHelper.THEME_DARK)
-        Toast.makeText(this, "Koyu tema seçildi", Toast.LENGTH_SHORT).show()
         val intent = Intent(this, ListelerimActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }

@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 
 object ThemeHelper {
-    const val PREF_NAME = "theme_pref"
-    const val KEY_THEME = "app_theme"
+    private const val PREF_NAME = "theme_pref"
+    private const val KEY_THEME = "app_theme"
 
     const val THEME_LIGHT = "light"
     const val THEME_DARK = "dark"
