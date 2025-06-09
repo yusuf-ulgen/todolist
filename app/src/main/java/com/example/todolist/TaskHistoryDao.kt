@@ -1,4 +1,4 @@
-package com.example.todolist.data
+package com.example.todolist
 
 import androidx.room.Dao
 import androidx.room.Insert

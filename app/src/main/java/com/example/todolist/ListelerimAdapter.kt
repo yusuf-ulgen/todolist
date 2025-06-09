@@ -3,7 +3,6 @@ package com.example.todolist
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.example.todolist.data.Todolist
 import com.example.todolist.databinding.ItemListBinding
 
 class ListelerimAdapter(

@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -12,6 +13,8 @@ class DayDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityDayDetailBinding
     private lateinit var db: AppDatabase
 
+    @OptIn(DelicateCoroutinesApi::class)
+    @SuppressLint("SimpleDateFormat")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDayDetailBinding.inflate(layoutInflater)

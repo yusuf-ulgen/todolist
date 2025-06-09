@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +15,7 @@ class DailyStatAdapter(
 ): RecyclerView.Adapter<DailyStatAdapter.VH>() {
 
     inner class VH(val binding: ItemDailyStatBinding): RecyclerView.ViewHolder(binding.root){
+        @SuppressLint("SimpleDateFormat", "SetTextI18n")
         fun bind(stat: DailyStat){
             binding.dateText.text = SimpleDateFormat("d MMMM", Locale("tr"))
                 .format(SimpleDateFormat("yyyy-MM-dd").parse(stat.date)!!)

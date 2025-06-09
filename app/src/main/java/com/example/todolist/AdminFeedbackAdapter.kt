@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -28,6 +29,7 @@ class AdminFeedbackAdapter(
             .format(Date(fb.timestamp))
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun submitList(new: List<FeedbackItem>) {
         items = new
         notifyDataSetChanged()

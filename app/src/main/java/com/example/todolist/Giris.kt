@@ -1,22 +1,17 @@
 @file:Suppress("DEPRECATION")
 package com.example.todolist
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AlertDialog
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.todolist.databinding.ActivityGirisBinding
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.messaging.FirebaseMessaging
 
 @Suppress("DEPRECATION")
 class Giris : AppCompatActivity() {
@@ -113,6 +108,7 @@ class Giris : AppCompatActivity() {
         }
     }
 
+    @Deprecated("This method has been deprecated in favor of using the Activity Result API\n      which brings increased type safety via an {@link ActivityResultContract} and the prebuilt\n      contracts for common intents available in\n      {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for\n      testing, and allow receiving results in separate, testable classes independent from your\n      activity. Use\n      {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}\n      with the appropriate {@link ActivityResultContract} and handling the result in the\n      {@link ActivityResultCallback#onActivityResult(Object) callback}.")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == RC_SIGN_IN) {
@@ -163,42 +159,5 @@ class Giris : AppCompatActivity() {
     private fun navigateToMain() {
         startActivity(Intent(this, ListelerimActivity::class.java))
         finish()
-    }
-
-    private fun showNotificationDialog() {
-        val root = binding.root
-        val options = arrayOf("Bildirim Gönderilsin", "Sadece Önemliler Gönderilsin", "Gönderilmesin")
-        AlertDialog.Builder(this)
-            .setTitle("Bildirim Seçenekleri")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> requestNotificationPermission(NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                    1 -> requestNotificationPermission(NotificationManagerCompat.IMPORTANCE_HIGH)
-                    2 -> Snackbar.make(root, "Bildirimler devre dışı", Snackbar.LENGTH_SHORT).show()
-                }
-            }
-            .show()
-    }
-
-    private fun requestNotificationPermission(priority: Int) {
-        val root = binding.root
-        if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            Snackbar.make(root, "Bildirimler zaten aktif.", Snackbar.LENGTH_SHORT).show()
-        } else {
-            FirebaseMessaging.getInstance().subscribeToTopic("all_notifications")
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        saveNotificationPreference(priority)
-                        Snackbar.make(root, "Bildirim tercihiniz kaydedildi.", Snackbar.LENGTH_SHORT).show()
-                    } else {
-                        Snackbar.make(root, "Bildirim aboneliği başarısız.", Snackbar.LENGTH_LONG).show()
-                    }
-                }
-        }
-    }
-
-    private fun saveNotificationPreference(priority: Int) {
-        val prefs = getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
-        prefs.edit().putInt("notification_priority", priority).apply()
     }
 }

@@ -1,5 +1,6 @@
 package com.example.todolist
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
@@ -11,8 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.todolist.data.Todolist
-import com.example.todolist.data.TodolistDao
 import com.example.todolist.databinding.ActivityListelerimBinding
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
@@ -137,6 +136,7 @@ class ListelerimActivity : AppCompatActivity() {
         else -> super.onOptionsItemSelected(item)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun loadLists() {
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
@@ -207,6 +207,7 @@ class ListelerimActivity : AppCompatActivity() {
             }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun showRenameDialog(todo: Todolist) {
         val input = EditText(this)
         input.setText(todo.name)

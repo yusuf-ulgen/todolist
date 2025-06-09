@@ -43,10 +43,6 @@ import android.graphics.Color
 import android.view.View
 import androidx.lifecycle.lifecycleScope
 import com.example.todolist.data.DailyStat
-import com.example.todolist.data.ResetTimeDao
-import com.example.todolist.data.Task
-import com.example.todolist.data.TaskDao
-import com.example.todolist.data.TaskHistory
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.tabs.TabLayout
