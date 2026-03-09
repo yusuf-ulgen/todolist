@@ -13,26 +13,35 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.todolist.databinding.ActivityResetTimeBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 
 class ResetTimeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityResetTimeBinding
-    private val resetTimeDao by lazy {
-        AppDatabase.getDatabase(applicationContext).resetTimeDao()
-    }
+    private lateinit var viewModel: TaskViewModel
 
-    @OptIn(DelicateCoroutinesApi::class)
     @SuppressLint("DiscouragedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityResetTimeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = TaskRepository(
+            db.taskDao(),
+            db.todolistDao(),
+            db.dailyStatDao(),
+            db.taskHistoryDao(),
+            db.notificationPrefDao(),
+            db.resetTimeDao()
+        )
+        val factory = TaskViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
         // 1) TimePicker'ı 24 saat formatına al ve rengini ayarla
         binding.timePicker.setIs24HourView(true)
@@ -43,36 +52,31 @@ class ResetTimeActivity : AppCompatActivity() {
                 ?.setTextColor(color)
         }
 
-        // Spinner varsayılan derringer yükleyelim:
-        GlobalScope.launch(Dispatchers.IO) {
-            resetTimeDao.getResetTime()?.let { saved ->
-                withContext(Dispatchers.Main) {
-                    // Saat/dakika gösterimi
-                    showSavedTime(saved.resetHour, saved.resetMinute)
-                    binding.timePicker.hour   = saved.resetHour
-                    binding.timePicker.minute = saved.resetMinute
-                    // Spinner’da kaydedilmiş günü seç
-                    binding.weekDaySpinner.setSelection(saved.resetDay)
-                }
+        // Observe reset time
+        viewModel.resetTime.observe(this) { saved ->
+            saved?.let {
+                showSavedTime(it.resetHour, it.resetMinute)
+                binding.timePicker.hour = it.resetHour
+                binding.timePicker.minute = it.resetMinute
+                binding.weekDaySpinner.setSelection(it.resetDay)
             }
         }
+        viewModel.loadResetTime()
 
         binding.saveResetTimeButton.setOnClickListener {
             val hour   = binding.timePicker.hour
             val minute = binding.timePicker.minute
             val dayPos = binding.weekDaySpinner.selectedItemPosition
 
-            // 1) Room’a upsert et (yeni alanla birlikte)
-            GlobalScope.launch(Dispatchers.IO) {
-                resetTimeDao.upsert(
-                    ResetTime(
-                        id = 0,
-                        resetHour   = hour,
-                        resetMinute = minute,
-                        resetDay    = dayPos
-                    )
+            // 1) Room’a upsert et
+            viewModel.saveResetTime(
+                ResetTime(
+                    id = 0,
+                    resetHour = hour,
+                    resetMinute = minute,
+                    resetDay = dayPos
                 )
-            }
+            )
 
             // 2) Haftalık alarmı planla
             scheduleWeeklyResetAlarm(hour, minute, dayPos)

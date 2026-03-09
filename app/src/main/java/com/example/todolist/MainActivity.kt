@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityMainBinding
 import com.example.todolist.databinding.ItemTaskBinding
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
@@ -42,7 +43,6 @@ import java.util.Locale
 import android.graphics.Color
 import android.view.View
 import androidx.lifecycle.lifecycleScope
-import com.example.todolist.data.DailyStat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.tabs.TabLayout
@@ -71,11 +71,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var notifPrefRepo: NotificationPreferenceRepository
     private lateinit var calendarAdapter: CalendarAdapter
     private lateinit var weeklyAdapter: TaskAdapter
+    private lateinit var viewModel: TaskViewModel
     private var tasks: List<Task> = mutableListOf()
+    private var searchQuery: String = ""
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
     private var currentListId: Long = 1L
     private var listName: String = "GÜNLÜK/HAFTALIK"
+    private var shouldScrollToBottomDaily = false
+    private var shouldScrollToBottomWeekly = false
+    private var dailyTasksList: List<Task> = mutableListOf()
+    private var weeklyTasksList: List<Task> = mutableListOf()
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,23 +145,30 @@ class MainActivity : AppCompatActivity() {
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
 
         db = AppDatabase.getDatabase(applicationContext)
+        val repository = TaskRepository(
+            db.taskDao(),
+            db.todolistDao(),
+            db.dailyStatDao(),
+            db.taskHistoryDao(),
+            db.notificationPrefDao(),
+            db.resetTimeDao()
+        )
+        val factory = TaskViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
+
         taskDao = db.taskDao()
         resetTimeDao = db.resetTimeDao()
 
         adapter = TaskAdapter(
-            mutableListOf(),
-            { task -> addTask(task, currentListId) },  // currentListId'yi burada geçiriyoruz
+            { task -> viewModel.addTask(task.apply { listId = currentListId }) },
             taskDao,
             { updateTaskStats() },
             onTimeClick = { task, b ->
-
-                // önce arka planda preference’ı al
-                GlobalScope.launch(Dispatchers.IO) {
+                // ... (existing logic for notification choice)
+                lifecycleScope.launch(Dispatchers.IO) {
                     val kind = notifPrefRepo.loadKind()
-
                     withContext(Dispatchers.Main) {
                         fun proceed() {
-                            // Android13+ izin kontrolü
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 ContextCompat.checkSelfPermission(
                                     this@MainActivity,
@@ -164,42 +177,60 @@ class MainActivity : AppCompatActivity() {
                             ) {
                                 requestNotifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                             }
-                            // sonra time picker’ı göster
                             showTimePickerAndSave(task, b)
                         }
-
                         if (kind < 0) {
-                            // daha önce hiç seçilmedi, diyalogu göster
                             showNotificationChoice { selectedKind ->
-                                // 1) seçimi kaydet
-                                GlobalScope.launch(Dispatchers.IO) {
+                                lifecycleScope.launch(Dispatchers.IO) {
                                     notifPrefRepo.saveKind(selectedKind)
                                 }
-                                // 2) devam et
                                 proceed()
                             }
                         } else {
-                            // zaten seçim var, direkt devam et
                             proceed()
                         }
                     }
                 }
-
-            }
+            },
+            onTaskUpdate = { task -> viewModel.updateTask(task) }
         )
         binding.includeDaily.todoRecyclerView.adapter = adapter
 
 
         weeklyAdapter = TaskAdapter(
-            mutableListOf(),
-            { task -> addTaskForWeekly(task, currentSelectedDow, currentListId) },  // currentListId'yi geçiriyoruz
+            { task -> viewModel.addTask(task.apply { 
+                weekday = currentSelectedDow.name
+                listId = currentListId 
+            }) },
             taskDao,
             onStatsChanged = { updateWeeklyStats() },
-            onTimeClick = { task, b -> showTimePickerAndSave(task, b) }
+            onTimeClick = { task, b -> showTimePickerAndSave(task, b) },
+            onTaskUpdate = { task -> viewModel.updateTask(task) }
         )
         binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
 
+        // Observe daily tasks
+        viewModel.tasks.observe(this) { updatedTasks ->
+            dailyTasksList = updatedTasks
+            filterAndDisplayTasks()
+        }
+
+        // Observe weekly tasks
+        viewModel.weeklyTasks.observe(this) { updatedTasks ->
+            weeklyTasksList = updatedTasks
+            filterAndDisplayTasks()
+        }
+
         loadTasks()
+
+        binding.searchView.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+            override fun onQueryTextChange(newText: String?): Boolean {
+                searchQuery = newText.orEmpty()
+                filterAndDisplayTasks()
+                return true
+            }
+        })
 
         intent?.let {
             currentListId = it.getLongExtra("listId", 1L) // Burada default değeri 1L olarak veriyoruz
@@ -267,10 +298,7 @@ class MainActivity : AppCompatActivity() {
                     // 2) Yeni sortOrder’ları ayarla
                     adapter.getTasks().forEachIndexed { idx, task ->
                         task.sortOrder = idx
-                        }
-                    // 3) DB’ye kalıcı yaz
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        adapter.getTasks().forEach { taskDao.updateTask(it) }
+                        viewModel.updateTask(task)
                         }
                     scheduleMoveReset()
                     return true
@@ -291,21 +319,14 @@ class MainActivity : AppCompatActivity() {
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val pos = viewHolder.adapterPosition
-                // silinen görevi al
-                val deletedTask = tasks[pos]
-                // UI’dan kaldır
+                val deletedTask = adapter.getTasks()[pos]
                 adapter.deleteItem(pos)
-                // veritabanından sil
-                GlobalScope.launch(Dispatchers.IO) { taskDao.deleteTask(deletedTask) }
+                viewModel.deleteTask(deletedTask)
 
                 // 3 saniyelik undo Snackbar
                 Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG /*≈3s*/)
                     .setAction("Geri Al") {
-                        // veritabanına geri ekle
-                        GlobalScope.launch(Dispatchers.IO) {
-                            taskDao.insertTask(deletedTask)
-                        }
-                        // UI’a geri ekle
+                        viewModel.addTask(deletedTask)
                         adapter.restoreItem(deletedTask, pos)
                     }
                     .show()
@@ -340,10 +361,7 @@ class MainActivity : AppCompatActivity() {
                     // 2) Her öğeye yeni sortOrder ata
                     weeklyAdapter.getTasks().forEachIndexed { idx, task ->
                         task.sortOrder = idx
-                        }
-                    // 3) DB’ye yaz
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        weeklyAdapter.getTasks().forEach { taskDao.updateTask(it) }
+                        viewModel.updateTask(task)
                         }
                     scheduleMoveReset()
                     return true
@@ -365,9 +383,7 @@ class MainActivity : AppCompatActivity() {
 
                 // UI’dan kaldır ve DB’den sil
                 weeklyAdapter.deleteItem(pos)
-                GlobalScope.launch(Dispatchers.IO) {
-                    taskDao.deleteTask(deletedTask)
-                }
+                viewModel.deleteTask(deletedTask)
 
                 // sayaç güncelle
                 updateWeeklyStats()
@@ -375,9 +391,7 @@ class MainActivity : AppCompatActivity() {
                 // undo Snackbar
                 Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
                     .setAction("Geri Al") {
-                        GlobalScope.launch(Dispatchers.IO) {
-                            taskDao.insertTask(deletedTask)
-                        }
+                        viewModel.addTask(deletedTask)
                         weeklyAdapter.restoreItem(deletedTask, pos)
                         updateWeeklyStats()
                     }
@@ -391,40 +405,28 @@ class MainActivity : AppCompatActivity() {
             .attachToRecyclerView(binding.includeWeekly.weeklyTasksRecyclerView)
 
         adapter.onItemDelete = { position ->
-            val deletedTask = tasks[position]
+            val deletedTask = adapter.getTasks()[position]
             adapter.deleteItem(position)
-            GlobalScope.launch(Dispatchers.IO) { taskDao.deleteTask(deletedTask) }
+            viewModel.deleteTask(deletedTask)
 
             Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
                 .setAction("Geri Al") {
-                    GlobalScope.launch(Dispatchers.IO) { taskDao.insertTask(deletedTask) }
+                    viewModel.addTask(deletedTask)
                     adapter.restoreItem(deletedTask, position)
                 }
                 .show()
         }
 
         weeklyAdapter.onItemDelete = { pos ->
-            // sadece weeklyAdapter listesinden al
             val deletedTask = weeklyAdapter.getTasks()[pos]
-            // UI’dan kaldır
             weeklyAdapter.deleteItem(pos)
-            // veritabanından sil
-            GlobalScope.launch(Dispatchers.IO) {
-                taskDao.deleteTask(deletedTask)
-            }
-            // hemen sayaç güncellensin
+            viewModel.deleteTask(deletedTask)
             updateWeeklyStats()
 
-            // 3 saniyelik undo Snackbar
             Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
                 .setAction("Geri Al") {
-                    // veritabanına geri koy
-                    GlobalScope.launch(Dispatchers.IO) {
-                        taskDao.insertTask(deletedTask)
-                    }
-                    // UI’a geri ekle
+                    viewModel.addTask(deletedTask)
                     weeklyAdapter.restoreItem(deletedTask, pos)
-                    // yine sayaç güncellensin
                     updateWeeklyStats()
                 }
                 .show()
@@ -465,6 +467,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    @Deprecated("This method has been deprecated in favor of using the.", ReplaceWith("finish()"))
     @SuppressLint("MissingSuperCall")
     override fun onBackPressed() {
         finish()
@@ -537,33 +540,21 @@ class MainActivity : AppCompatActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     private fun loadWeeklyTasksForDay(dow: DayOfWeek, scrollToEnd: Boolean = false) {
         currentSelectedDow = dow
-        GlobalScope.launch(Dispatchers.IO) {
-            val weekly = taskDao.getTasksByWeekday(FirebaseAuth.getInstance().currentUser!!.uid, dow.name)
-            withContext(Dispatchers.Main) {
-                val (pinnedW, restW) = weekly.partition { it.isPinned }
-                weeklyAdapter.setTasks(pinnedW + restW)
-                updateWeeklyStats()
-                // Eğer scrollToEnd=true ise en son elemana kaydır
-                if (scrollToEnd && weekly.isNotEmpty()) {
-                    binding.includeWeekly.weeklyTasksRecyclerView.post {
-                        binding.includeWeekly.weeklyTasksRecyclerView
-                            .scrollToPosition(weekly.lastIndex)
-                    }
-                }
-            }
-        }
-        updateWeeklyStats()
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        viewModel.loadWeeklyTasksForDay(uid, dow.name)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: Long) {
+        shouldScrollToBottomWeekly = true
         task.weekday = selectedDayOfWeek.name
         task.listId = listId // listId'yi ekliyoruz
 
-        GlobalScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
             // Mevcut haftalık görevler o güne ait
             val existing = taskDao.getTasksByWeekday(
-                FirebaseAuth.getInstance().currentUser!!.uid,
+                uid,
                 selectedDayOfWeek.name
                         )
             task.sortOrder = existing.size
@@ -601,42 +592,62 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadTasks()
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            loadWeeklyTasksForDay(currentSelectedDow)
+        }
         checkAndPerformReset()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun loadTasks(scrollToEnd: Boolean = false) {
+        viewModel.loadTasksByListId(currentListId)
+    }
 
-        GlobalScope.launch(Dispatchers.IO) {
-            val currentList = taskDao.getTasksByListId(currentListId)
-            val dailyOnly = currentList.filter { it.weekday.isNullOrBlank() }
-
-            // Eğer liste boşsa
-            if (currentList.isEmpty()) {
-                withContext(Dispatchers.Main) {
-                    adapter.setTasks(mutableListOf()) // Adapter'e boş listeyi ver
-                }
+    private fun filterAndDisplayTasks() {
+        if (binding.includeWeekly.root.visibility == View.VISIBLE) {
+            val filtered = if (searchQuery.isBlank()) {
+                weeklyTasksList
             } else {
-                withContext(Dispatchers.Main) {
-                    val (pinned, rest) = dailyOnly.partition { it.isPinned }
-                    tasks = pinned + rest
-                    adapter.setTasks(tasks)
-                    if (scrollToEnd && tasks.isNotEmpty()) {
-                        // Yeni eklenen göreve kadar kaydırma işlemi
-                        binding.includeDaily.todoRecyclerView.scrollToPosition(tasks.size - 1)
-                    }
+                weeklyTasksList.filter { it.content.contains(searchQuery, ignoreCase = true) }
+            }
+            val (pinned, rest) = filtered.partition { it.isPinned }
+            val sortedList = pinned + rest
+
+            weeklyAdapter.setTasks(sortedList) {
+                if (shouldScrollToBottomWeekly) {
+                    binding.includeWeekly.weeklyTasksRecyclerView.scrollToPosition(weeklyAdapter.itemCount - 1)
+                    shouldScrollToBottomWeekly = false
                 }
+                updateWeeklyStats()
+            }
+        } else {
+            val filtered = if (searchQuery.isBlank()) {
+                dailyTasksList
+            } else {
+                dailyTasksList.filter { it.content.contains(searchQuery, ignoreCase = true) }
+            }
+            val (pinned, rest) = filtered.partition { it.isPinned }
+            val sortedList = pinned + rest
+
+            adapter.setTasks(sortedList) {
+                if (shouldScrollToBottomDaily) {
+                    binding.includeDaily.todoRecyclerView.scrollToPosition(adapter.itemCount - 1)
+                    shouldScrollToBottomDaily = false
+                }
+                updateTaskStats()
             }
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun addTask(task: Task, listId: Long) {
+        shouldScrollToBottomDaily = true
         val currentUser = FirebaseAuth.getInstance().currentUser
 
         task.listId = listId // Assigning the listId
 
-        GlobalScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.IO) {
             // Mevcut günlük görevler
             val existing: List<Task> = taskDao.getTasksByListId(listId)
             // En sona at
@@ -662,14 +673,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fireDailyConfettiIfNeeded() {
-        val total = adapter.getTasks().size
+        if (adapter.itemCount == 0) return
+        val total = adapter.itemCount
         val done  = adapter.getTasks().count { it.isChecked }
-        if (total > 0 && done == total) {
+        if (done == total) {
             binding.includeDaily.konfettiView.apply {
-                // Önce üst katmana taşı
-                bringToFront()
-                // Başlat
                 visibility = View.VISIBLE
+                bringToFront()
                 start(createParty())
                 postDelayed({ visibility = View.GONE }, 5_000)
             }
@@ -677,14 +687,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fireWeeklyConfettiIfNeeded() {
-        val total = weeklyAdapter.getTasks().size
+        if (weeklyAdapter.itemCount == 0) return
+        val total = weeklyAdapter.itemCount
         val done  = weeklyAdapter.getTasks().count { it.isChecked }
-        if (total > 0 && done == total) {
+        if (done == total) {
             binding.includeWeekly.weeklyKonfettiView.apply {
-                // Önce üst katmana taşı
-                bringToFront()
-                // Başlat
                 visibility = View.VISIBLE
+                bringToFront()
                 start(createParty())
                 postDelayed({ visibility = View.GONE }, 5_000)
             }
@@ -824,59 +833,82 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    //  Reset kontrol + kayıt + sıfırlama
-    @OptIn(DelicateCoroutinesApi::class)
     @SuppressLint("NewApi")
     private fun checkAndPerformReset() {
-        GlobalScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.IO) {
             val resetTime = resetTimeDao.getResetTime() ?: return@launch
 
-            // Şu an
             val now = Calendar.getInstance()
-            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now.time)
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)
-            if (prefs.getString("last_reset_day", "") == todayKey) return@launch
+            val lastResetDay = prefs.getString("last_reset_day", "")
 
-            // Zamanı geçmiş mi?
-            val nowTotal   = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-            val resetTotal = resetTime.resetHour * 60 + resetTime.resetMinute
-            if (nowTotal < resetTotal) return@launch
+            // Reset zamanını belirle (Bugün için ayarlanan saat)
+            val resetCal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, resetTime.resetHour)
+                set(Calendar.MINUTE, resetTime.resetMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
 
-            // 1) Veritabanından tüm görevleri çek
-            val allTasks = taskDao.getAllTasks()
+            // Eğer şu an reset saatinden önceyse, henüz reset vakti gelmemiştir.
+            if (now.before(resetCal)) return@launch
 
-            // 2) İstatistik kaydı — sadece günlük için
-            val dailyTasks   = allTasks.filter { it.weekday.isNullOrBlank() }
-            val completedD   = dailyTasks.count { it.isChecked }
-            val totalD       = dailyTasks.size
-            db.dailyStatDao().upsert(DailyStat(todayKey, completedD, totalD))
+            // Bugünün anahtarı (Reset yapıldıktan sonra kaydedilecek)
+            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(now.time)
+            if (lastResetDay == todayKey) return@launch
 
-            // 3) Görev geçmişine kaydet — burada dilersen sadece günlük ya da hepsini tut
-            val history = dailyTasks.map {
+            // 1) Tüm görevleri çek (SADECE listId = 1 ve mevcut kullanıcıya ait olanları istatistik için kullanacağız)
+            val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+            val allTasks = taskDao.getAllTasks().filter { it.listId == 1L && it.userId == currentUid }
+
+            // 2) İstatistik hesaplama: Günlük Görevler + Bugünün Haftalık Görevleri
+            val todayDowName = LocalDate.now().dayOfWeek.name
+            
+            val dailyTasks = allTasks.filter { it.weekday.isNullOrBlank() }
+            val weeklyTodayTasks = allTasks.filter { it.weekday == todayDowName }
+            
+            val combinedTasks = dailyTasks + weeklyTodayTasks
+            val completedCount = combinedTasks.count { it.isChecked }
+            val totalCount = combinedTasks.size
+
+            // İstatistiği kaydet
+            db.dailyStatDao().upsert(DailyStat(todayKey, completedCount, totalCount))
+
+            // 3) Geçmişe kaydet (Sadece günlük olanlar mı? Kullanıcı "o günün istatistiklerini" dediği için kombineyi de kaydedebiliriz ama şimdilik mevcut yapıyı koruyalım)
+            val history = combinedTasks.map {
                 TaskHistory(date = todayKey, content = it.content, time = it.time, isChecked = it.isChecked)
             }
             db.taskHistoryDao().insertAll(history)
 
-            // 4) Günlük görevleri temizle
+            // 4) Günlük görevlerin checkbox'larını sıfırla
             dailyTasks.forEach {
                 it.isChecked = false
                 taskDao.updateTask(it)
             }
 
-            // 5) Haftalık görevleri temizle — sadece bugünün
-            val todayDow = LocalDate.now().dayOfWeek.name
-            val weeklyToday = allTasks.filter { it.weekday == todayDow }
-            weeklyToday.forEach {
-                it.isChecked = false
-                taskDao.updateTask(it)
+            // 5) Haftalık görevleri sıfırla — SADECE PAZARTESİ İSE (Hafta başı)
+            // Kullanıcı "pazartesi gecesi" dediğinde genellikle pazartesiden salıya geçiş veya pazartesi başını kasteder.
+            // "salı yaptığım görevlere çarşamba girip baktığımda checkboxları kaybolmamalı" dediği için
+            // haftalık görevler haftada sadece bir kez sıfırlanmalı.
+            if (LocalDate.now().dayOfWeek == DayOfWeek.MONDAY) {
+                val allWeeklyTasks = allTasks.filter { !it.weekday.isNullOrBlank() }
+                allWeeklyTasks.forEach {
+                    it.isChecked = false
+                    taskDao.updateTask(it)
+                }
+            } else {
+                // Diğer günlerde sadece bugünün haftalık görevlerini de sıfırlama seçeneği olabilir ama 
+                // kullanıcı "haftalık görevler pazartesi gecesinde sıfırlanmalı" dediği için diğer günler ellemiyoruz.
+                // Eğer her günü kendi içinde sıfırlamak isteseydik buraya weeklyTodayTasks eklerdik.
+                // Ancak kullanıcı net bir şekilde "haftalık görevler pazartesi gecesi sıfırlanmalı" dedi.
             }
 
-            // 6) Kaydı al ve UI’yi yenile
+            // 6) Tercihi kaydet ve UI tazele
             prefs.edit().putString("last_reset_day", todayKey).apply()
             withContext(Dispatchers.Main) {
-                loadTasks()           // günlük view
-                if (findViewById<View>(R.id.includeWeekly).visibility == View.VISIBLE) {
-                    loadWeeklyTasksForDay(LocalDate.now().dayOfWeek, scrollToEnd = false)
+                loadTasks()
+                if (binding.includeWeekly.root.visibility == View.VISIBLE) {
+                    loadWeeklyTasksForDay(LocalDate.now().dayOfWeek)
                 }
             }
         }
@@ -937,7 +969,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun showTimePickerAndSave(task: Task, b: ItemTaskBinding) {
         val calNow = Calendar.getInstance()
         TimePickerDialog(
@@ -947,9 +978,7 @@ class MainActivity : AppCompatActivity() {
                 b.timeTextView.text = timeText
                 task.time = timeText
 
-                GlobalScope.launch(Dispatchers.IO) {
-                    taskDao.updateTask(task)
-                }
+                viewModel.updateTask(task)
 
                 cancelTaskNotification(task)
                 scheduleTaskNotification(task, hourOfDay, minute)

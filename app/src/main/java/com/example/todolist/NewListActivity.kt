@@ -4,10 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.example.todolist.databinding.ActivityNewListBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 class NewListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNewListBinding
+    private lateinit var viewModel: TaskViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
@@ -28,6 +29,18 @@ class NewListActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.title = listName
+
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = TaskRepository(
+            db.taskDao(),
+            db.todolistDao(),
+            db.dailyStatDao(),
+            db.taskHistoryDao(),
+            db.notificationPrefDao(),
+            db.resetTimeDao()
+        )
+        val factory = TaskViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
         // FAB’e tıklandığında bu listeye ait işlemler (örneğin yeni göreve geçiş) buraya
         binding.fab.setOnClickListener {
@@ -48,14 +61,13 @@ class NewListActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun saveList(listName: String) {
         // Yeni bir liste oluştur
         val newList = Todolist(name = listName) // Burada boş bir liste oluşturuyoruz
 
-        GlobalScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(Dispatchers.IO) {
             // Listeyi veritabanına ekle
-            AppDatabase.getDatabase(applicationContext).todolistDao().insert(newList)
+            viewModel.updateLists(newList)
 
             // Liste kaydedildikten sonra ListelerimActivity'ye dön
             withContext(Dispatchers.Main) {

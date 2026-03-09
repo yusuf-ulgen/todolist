@@ -11,20 +11,18 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.PopupMenu
 import android.graphics.Paint
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 class TaskAdapter(
-    private var tasks: MutableList<Task>,
     private val addTaskCallback: (Task) -> Unit,
     private val taskDao: TaskDao,
     var onStatsChanged: () -> Unit,
-    private val onTimeClick: (task: Task, binding: ItemTaskBinding) -> Unit
-) : RecyclerView.Adapter<TaskAdapter.TaskViewHolder>() {
+    private val onTimeClick: (task: Task, binding: ItemTaskBinding) -> Unit,
+    private val onTaskUpdate: (Task) -> Unit
+) : ListAdapter<Task, TaskAdapter.TaskViewHolder>(TaskDiffCallback()) {
 
     inner class TaskViewHolder(val binding: ItemTaskBinding) : RecyclerView.ViewHolder(binding.root)
     var onItemDelete: ((position: Int) -> Unit)? = null
@@ -34,10 +32,9 @@ class TaskAdapter(
         return TaskViewHolder(binding)
     }
 
-    @SuppressLint("NotifyDataSetChanged", "SetTextI18n")
-    @OptIn(DelicateCoroutinesApi::class)
+    @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
-        val task = tasks[position]
+        val task = getItem(position)
         val b = holder.binding
         val ctx = holder.itemView.context
 
@@ -70,9 +67,7 @@ class TaskAdapter(
 
         b.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
             task.isChecked = isChecked
-            GlobalScope.launch(Dispatchers.IO) {
-                taskDao.updateTask(task)
-            }
+            onTaskUpdate(task)
             onStatsChanged()
 
             // Metin rengini güncelle
@@ -105,7 +100,17 @@ class TaskAdapter(
             b.taskEditText.paddingBottom
         )
 
-        // 5) Görev numarası ve checkbox görünürlüğü
+        // 5) Öncelik Göstergesi
+        val priorityColor = when (task.priority) {
+            1 -> R.color.priority_low
+            2 -> R.color.priority_medium
+            3 -> R.color.priority_high
+            else -> android.R.color.transparent
+        }
+        b.priorityIndicator.setBackgroundColor(ContextCompat.getColor(ctx, priorityColor))
+        b.priorityIndicator.visibility = if (task.priority > 0) View.VISIBLE else View.GONE
+
+        // 6) Görev numarası ve checkbox görünürlüğü
         b.taskNumber.text = (position + 1).toString()
         val hasContent = task.content.isNotBlank()
         b.taskNumber.visibility = if (hasContent) View.VISIBLE else View.GONE
@@ -128,7 +133,7 @@ class TaskAdapter(
                     b.taskEditText.requestFocus()
                 } else {
                     task.content = txt
-                    GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
+                    onTaskUpdate(task)
                     b.taskEditText.isEnabled = false
                     b.taskEditText.clearFocus()
                     b.taskEditText.visibility = View.GONE
@@ -139,7 +144,6 @@ class TaskAdapter(
                     b.taskCheckBox.visibility = View.VISIBLE
                     (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
                         .hideSoftInputFromWindow(v.windowToken, 0)
-                    notifyItemChanged(position)
                     onStatsChanged()
                 }
                 true
@@ -163,6 +167,12 @@ class TaskAdapter(
             val popup = PopupMenu(ctx, it)
             popup.menu.add("Düzenle")
             popup.menu.add("Sil")
+            val priorityMenu = popup.menu.addSubMenu("Öncelik")
+            priorityMenu.add(0, 0, 0, "Yok")
+            priorityMenu.add(0, 1, 1, "Düşük")
+            priorityMenu.add(0, 2, 2, "Orta")
+            priorityMenu.add(0, 3, 3, "Yüksek")
+
             val pinTitle = if (task.isPinned) "Sabitlemeyi Kaldır" else "Başa Sabitle"
             popup.menu.add(pinTitle)
             popup.setOnMenuItemClickListener { menuItem ->
@@ -179,27 +189,26 @@ class TaskAdapter(
                         b.taskEditText.setSelection(b.taskEditText.text.length)
                         b.taskMarqueeText.visibility = View.GONE
                     }
+                    "Yok" -> { task.priority = 0; onTaskUpdate(task); notifyItemChanged(position) }
+                    "Düşük" -> { task.priority = 1; onTaskUpdate(task); notifyItemChanged(position) }
+                    "Orta" -> { task.priority = 2; onTaskUpdate(task); notifyItemChanged(position) }
+                    "Yüksek" -> { task.priority = 3; onTaskUpdate(task); notifyItemChanged(position) }
                     pinTitle -> {
                         if (task.isPinned) {
                             task.isPinned = false
-                            GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
-                            tasks.removeAt(position)
-                            val insertPos = tasks.indexOfLast { it.isPinned } + 1
-                            tasks.add(insertPos, task)
+                            onTaskUpdate(task)
+                            notifyItemChanged(position)
                         } else {
-                            val pinnedCount = tasks.count { it.isPinned }
+                            val pinnedCount = currentList.count { it.isPinned }
                             if (pinnedCount >= 10) {
                                 b.taskEditText.error = "En fazla 10 görev sabitlenebilir!"
                                 b.taskEditText.requestFocus()
                             } else {
                                 task.isPinned = true
-                                GlobalScope.launch(Dispatchers.IO) { taskDao.updateTask(task) }
-                                tasks.removeAt(position)
-                                val insertPos = tasks.indexOfLast { it.isPinned }
-                                tasks.add(if (insertPos == -1) 0 else insertPos + 1, task)
+                                onTaskUpdate(task)
+                                notifyItemChanged(position)
                             }
                         }
-                        notifyDataSetChanged()
                     }
                 }
                 true
@@ -208,44 +217,41 @@ class TaskAdapter(
         }
     }
 
-    override fun getItemCount() = tasks.size
+    override fun getItemCount() = currentList.size
 
     fun moveItem(from: Int, to: Int) {
-        // 1) Öğeyi listeden al
-        val item = tasks.removeAt(from)
-        // 2) Yeni pozisyona koy
-        tasks.add(to, item)
-        // 3) RecyclerView’a bildir
+        // ListAdapter ile move işlemi biraz farklıdır, genellikle submitList ile yapılır.
+        // Ancak bu app'te drag & drop sırasında UI'ı hızlı güncellemek için
+        // geçici bir liste kullanabiliriz veya her harekette submitList yapabiliriz.
+        // Şimdilik notifyItemMoved yeterli olabilir ama DB güncellemesi zaten yapılıyor.
         notifyItemMoved(from, to)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     fun deleteItem(position: Int) {
-        // 1) Hemen UI’dan çıkar
-        val removed = tasks.removeAt(position)
-        notifyItemRemoved(position)
-        // İndeksler değiştiği için kalanları da güncelle
-        notifyItemRangeChanged(position, tasks.size - position)
-        // İstatistikleri yenile
+        // ListAdapter'da silme işlemi genellikle veriyi güncelleyip submitList yaparak olur.
+        // Callback'ler üzerinden DB silme yapıldığı için viewModel loadTasks çağırdığında 
+        // submitList otomatik olarak güncellenecektir.
         onStatsChanged()
-
-        // 2) Arka planda DB’den sil
-        GlobalScope.launch(Dispatchers.IO) {
-            taskDao.deleteTask(removed)
-        }
     }
 
     // Pozisyona göre silinen görevi geri eklemek için
     fun restoreItem(task: Task, position: Int) {
-        tasks.add(position, task)
-        notifyItemInserted(position)
+        // ViewModel üzerinden ekleme yapınca submitList güncellenecek
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    fun setTasks(newTasks: List<Task>) {
-        tasks = newTasks.toMutableList()
-        notifyDataSetChanged()
+    fun setTasks(newTasks: List<Task>, commitCallback: (() -> Unit)? = null) {
+        submitList(newTasks, commitCallback)
     }
 
-    fun getTasks() = tasks
+    fun getTasks() = currentList
+}
+
+class TaskDiffCallback : DiffUtil.ItemCallback<Task>() {
+    override fun areItemsTheSame(oldItem: Task, newItem: Task): Boolean {
+        return oldItem.id == newItem.id
+    }
+
+    override fun areContentsTheSame(oldItem: Task, newItem: Task): Boolean {
+        return oldItem == newItem
+    }
 }

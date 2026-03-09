@@ -19,22 +19,22 @@ class ThemeActivity : AppCompatActivity() {
     }
 
     // Beyaz kısma tıklanırsa beyaz tema uygula ve MainActivity'e dön
-    fun onWhiteClick() {
+    fun onWhiteClick(view: android.view.View) {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_LIGHT)
         ThemeHelper.applyTheme(ThemeHelper.THEME_LIGHT)
         val intent = Intent(this, ListelerimActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         startActivity(intent)
         finish()
     }
 
     // Siyah kısma tıklanırsa siyah tema uygula ve MainActivity'e dön
-    fun onBlackClick() {
+    fun onBlackClick(view: android.view.View) {
         ThemeHelper.saveTheme(this, ThemeHelper.THEME_DARK)
         ThemeHelper.applyTheme(ThemeHelper.THEME_DARK)
         val intent = Intent(this, ListelerimActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         startActivity(intent)
         finish()

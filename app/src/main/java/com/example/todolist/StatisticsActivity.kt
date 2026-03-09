@@ -3,37 +3,42 @@ package com.example.todolist
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.todolist.databinding.ActivityStatisticsBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class StatisticsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityStatisticsBinding
-    private lateinit var db: AppDatabase
+    private lateinit var viewModel: TaskViewModel
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityStatisticsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        db = AppDatabase.getDatabase(this)
 
-        // 30 günlük veri çek
-        GlobalScope.launch(Dispatchers.IO) {
-            val stats = db.dailyStatDao().getLast30Days()
-            withContext(Dispatchers.Main) {
-                binding.statsRecycler.layoutManager = LinearLayoutManager(this@StatisticsActivity)
-                binding.statsRecycler.adapter = DailyStatAdapter(stats){ stat ->
-                    // Tıklayınca detay sayfası, stat.date’i geç
-                    startActivity(
-                        Intent(this@StatisticsActivity, DayDetailActivity::class.java)
-                        .putExtra("date", stat.date))
-                }
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = TaskRepository(
+            db.taskDao(),
+            db.todolistDao(),
+            db.dailyStatDao(),
+            db.taskHistoryDao(),
+            db.notificationPrefDao(),
+            db.resetTimeDao()
+        )
+        val factory = TaskViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
+
+        // Observe stats
+        viewModel.last30DaysStats.observe(this) { stats ->
+            binding.statsRecycler.layoutManager = LinearLayoutManager(this@StatisticsActivity)
+            binding.statsRecycler.adapter = DailyStatAdapter(stats) { stat ->
+                startActivity(
+                    Intent(this@StatisticsActivity, DayDetailActivity::class.java)
+                        .putExtra("date", stat.date)
+                )
             }
         }
+
+        viewModel.loadLast30DaysStats()
     }
 }

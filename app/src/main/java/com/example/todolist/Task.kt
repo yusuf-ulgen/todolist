@@ -14,5 +14,6 @@ data class Task(
     @ColumnInfo(name = "isPinned") var isPinned: Boolean = false,
     @ColumnInfo(name = "sortOrder") var sortOrder: Int = 0,
     @ColumnInfo(name = "weekday") var weekday: String? = null,
-    @ColumnInfo(name = "listId", defaultValue = "1") var listId: Long
+    @ColumnInfo(name = "listId", defaultValue = "1") var listId: Long = 1,
+    @ColumnInfo(name = "priority", defaultValue = "0") var priority: Int = 0
 )

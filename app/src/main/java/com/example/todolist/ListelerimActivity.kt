@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ActivityListelerimBinding
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
@@ -25,8 +26,8 @@ import java.util.Collections
 class ListelerimActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityListelerimBinding
-    private lateinit var listDao: TodolistDao
     private lateinit var adapter: ListelerimAdapter
+    private lateinit var viewModel: TaskViewModel
     private val lists = mutableListOf<Todolist>()
 
     companion object {
@@ -41,8 +42,17 @@ class ListelerimActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        // DAO
-        listDao = AppDatabase.getDatabase(this).todolistDao()
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = TaskRepository(
+            db.taskDao(),
+            db.todolistDao(),
+            db.dailyStatDao(),
+            db.taskHistoryDao(),
+            db.notificationPrefDao(),
+            db.resetTimeDao()
+        )
+        val factory = TaskViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
         // RecyclerView + Adapter
         adapter = ListelerimAdapter(
@@ -97,9 +107,9 @@ class ListelerimActivity : AppCompatActivity() {
                 lifecycleScope.launch(Dispatchers.IO) {
                     lists.forEachIndexed { idx, todoList ->
                         todoList.sortOrder = idx
-                        }
-                    listDao.updateList(*lists.toTypedArray())
                     }
+                    viewModel.updateLists(*lists.toTypedArray())
+                }
                 return true
             }
             override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) = Unit
@@ -108,6 +118,13 @@ class ListelerimActivity : AppCompatActivity() {
         // Yeni liste oluşturma
         binding.fab.setOnClickListener {
             startActivity(Intent(this, NewListActivity::class.java))
+        }
+
+        // Observe lists
+        viewModel.lists.observe(this) { updatedLists ->
+            lists.clear()
+            lists.addAll(updatedLists.filter { it.id != DEFAULT_LIST_ID })
+            adapter.notifyDataSetChanged()
         }
     }
 
@@ -138,18 +155,7 @@ class ListelerimActivity : AppCompatActivity() {
 
     @SuppressLint("NotifyDataSetChanged")
     private fun loadLists() {
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                if (listDao.getAllLists().isEmpty()) {
-                    listDao.insertList(Todolist(name = DEFAULT_LIST_NAME))
-                }
-            }
-            val all = withContext(Dispatchers.IO) { listDao.getAllLists() }
-            lists.clear()
-            // Default liste hariç diğer tüm listeleri ekle
-            lists.addAll(all.filter { it.id != DEFAULT_LIST_ID })
-            adapter.notifyDataSetChanged()
-        }
+        viewModel.loadAllLists()
     }
 
     private fun confirmAndDelete(todo: Todolist) {
@@ -157,10 +163,7 @@ class ListelerimActivity : AppCompatActivity() {
             .setTitle("Silme Onayı")
             .setMessage("“${todo.name}” listesini silmek istediğinize emin misiniz?")
             .setPositiveButton("Evet") { _, _ ->
-                lifecycleScope.launch(Dispatchers.IO) {
-                    listDao.delete(todo)
-                    loadLists()
-                }
+                viewModel.deleteList(todo)
             }
             .setNegativeButton("Hayır", null)
             .show()
@@ -219,12 +222,7 @@ class ListelerimActivity : AppCompatActivity() {
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {
                     todo.name = newName
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        listDao.updateList(todo)
-                        withContext(Dispatchers.Main) {
-                            adapter.notifyDataSetChanged()
-                        }
-                    }
+                    viewModel.updateLists(todo)
                 }
             }
             .setNegativeButton("İptal", null)
