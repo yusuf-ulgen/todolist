@@ -9,11 +9,12 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/themeButton"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="24dp"
         android:text="Tema"
         android:textSize="18sp"
         app:backgroundTint="?attr/colorPrimary"
@@ -24,6 +25,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/resetTimeButton"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
@@ -31,8 +33,8 @@
         android:layout_marginTop="24dp"
         android:text="Resetleme Zamanı"
         android:textSize="18sp"
-        app:backgroundTint="?attr/colorSecondaryVariant"
-        android:textColor="?attr/colorOnSecondary"
+        app:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toBottomOf="@id/themeButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -54,6 +56,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/changePasswordButton"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
@@ -61,14 +64,15 @@
         android:layout_marginTop="24dp"
         android:text="Şifre"
         android:textSize="18sp"
-        app:backgroundTint="?attr/colorSecondaryVariant"
-        android:textColor="?attr/colorOnSecondary"
+        app:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toBottomOf="@id/statisticsButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/feedbackListButton"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="60dp"
         android:layout_marginStart="20dp"
@@ -76,8 +80,8 @@
         android:layout_marginEnd="20dp"
         android:text="Geri Bildirimler"
         android:textSize="18sp"
-        app:backgroundTint="?attr/colorSecondary"
-        android:textColor="?attr/colorOnSecondary"
+        app:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
         app:layout_constraintTop_toBottomOf="@id/changePasswordButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

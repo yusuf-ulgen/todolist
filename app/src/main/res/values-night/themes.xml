@@ -23,6 +23,12 @@
         <item name="android:statusBarColor">@color/creamPrimaryVariant</item>
         <item name="android:navigationBarColor">@color/creamBackground</item>
 
+        <!-- Material Variantları -->
+        <item name="colorPrimaryVariant">@color/creamPrimaryVariant</item>
+        <item name="colorSecondary">@color/colorAccent</item>
+        <item name="colorSecondaryVariant">@color/creamPrimary</item>
+        <item name="colorOnSecondary">@color/creamOnPrimary</item>
+
         <!-- Metin renkleri -->
         <item name="android:textColorPrimary">@color/task_text_default</item>
         <item name="android:textColorSecondary">@color/gray</item>
@@ -32,11 +38,50 @@
 
         <item name="taskTextDefault">@color/task_text_default</item>
         <item name="taskTextChecked">@color/task_text_checked</item>
+        <item name="taskSupplementaryColor">@color/task_supplementary_dark</item>
+
+        <!-- Button colors for dark theme -->
+        <item name="controlButtonColor">@color/button_text_dark</item>
 
         <!-- TabLayout için text renkleri -->
         <item name="tabUnselectedTextColor">@color/dark_tab_unselected</item>
+        <item name="gray">@color/gray</item>
         <item name="tabSelectedTextColor">@color/dark_tab_selected</item>
         <item name="tabIndicatorColor">@color/colorAccent</item>
+
+        <!-- TimePicker Teması -->
+        <item name="android:timePickerStyle">@style/Widget.App.TimePicker.Dark</item>
+
+        <!-- Snackbar styling fix -->
+        <item name="snackbarButtonStyle">@style/Widget.App.Snackbar.Button</item>
+        
+        <!-- Feedback Dialog Attributes -->
+        <item name="feedbackBackground">#2C2C2C</item>
+        <item name="feedbackHeaderBackground">#000000</item>
+        <item name="feedbackHeaderText">#FFFFFF</item>
+        <item name="feedbackInputBackground">#3D3D3D</item>
+        <item name="feedbackInputText">#EEEEEE</item>
+        <item name="feedbackInputHint">#888888</item>
+        <item name="snackbarActionColor">#00BC91</item>
+    </style>
+
+    <style name="CustomAlertDialog" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+
+    <style name="Widget.App.TimePicker.Dark" parent="android:Widget.Material.TimePicker">
+        <item name="android:headerBackground">#333333</item>
+        <item name="android:numbersTextColor">#FFFFFF</item>
+        <item name="android:numbersSelectorColor">@color/gray</item>
+        <item name="android:numbersBackgroundColor">#444444</item>
+        <item name="android:amPmTextColor">#FFFFFF</item>
+    </style>
+
+    <!-- Snackbar Style Override -->
+    <style name="Widget.App.Snackbar.Button" parent="Widget.MaterialComponents.Button.TextButton.Snackbar">
+        <item name="android:textColor">?attr/controlButtonColor</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
     <style name="SubtitleLarge" parent="TextAppearance.MaterialComponents.Subtitle1">

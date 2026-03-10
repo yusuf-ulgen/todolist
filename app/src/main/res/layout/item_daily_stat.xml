@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:text="2025-05-03"
         android:textStyle="bold"
-        android:textColor="?attr/colorPrimary"
+        android:textColor="?attr/colorOnBackground"
         android:textSize="16sp"/>
 
     <TextView

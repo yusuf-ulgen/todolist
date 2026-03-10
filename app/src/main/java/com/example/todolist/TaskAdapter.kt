@@ -3,13 +3,13 @@ package com.example.todolist
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Paint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.PopupMenu
-import android.graphics.Paint
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -17,14 +17,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.todolist.databinding.ItemTaskBinding
 
 class TaskAdapter(
-    private val addTaskCallback: (Task) -> Unit,
-    private val taskDao: TaskDao,
-    var onStatsChanged: () -> Unit,
-    private val onTimeClick: (task: Task, binding: ItemTaskBinding) -> Unit,
-    private val onTaskUpdate: (Task) -> Unit
+        private val addTaskCallback: (Task) -> Unit,
+        private val taskDao: TaskDao,
+        var onStatsChanged: () -> Unit,
+        private val onTimeClick: (task: Task, binding: ItemTaskBinding) -> Unit,
+        private val onTaskUpdate: (Task) -> Unit
 ) : ListAdapter<Task, TaskAdapter.TaskViewHolder>(TaskDiffCallback()) {
 
-    inner class TaskViewHolder(val binding: ItemTaskBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class TaskViewHolder(val binding: ItemTaskBinding) :
+            RecyclerView.ViewHolder(binding.root)
     var onItemDelete: ((position: Int) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
@@ -44,7 +45,6 @@ class TaskAdapter(
         b.taskMarqueeText.text = task.content
         b.taskMarqueeText.isSelected = true
 
-
         // 1) İçerik ve Saat
         b.taskEditText.setText(task.content)
         b.timeTextView.text = task.time.takeIf { it.isNotBlank() && it != "Saat" } ?: "Saat"
@@ -54,16 +54,13 @@ class TaskAdapter(
         b.taskCheckBox.isChecked = task.isChecked
 
         // Hem metin rengini hem de strike‐through’u başlangıçta ayarla
-        val initColorRes = if (task.isChecked)
-            R.color.task_text_checked
-        else
-            R.color.task_text_default
+        val initColorRes =
+                if (task.isChecked) R.color.task_text_checked else R.color.task_text_default
 
         b.taskEditText.setTextColor(ContextCompat.getColor(ctx, initColorRes))
-        b.taskEditText.paintFlags = if (task.isChecked)
-            b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-        else
-            b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+        b.taskEditText.paintFlags =
+                if (task.isChecked) b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                else b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
 
         b.taskCheckBox.setOnCheckedChangeListener { _, isChecked ->
             task.isChecked = isChecked
@@ -71,10 +68,7 @@ class TaskAdapter(
             onStatsChanged()
 
             // Metin rengini güncelle
-            val colorRes = if (isChecked)
-                R.color.task_text_checked
-            else
-                R.color.task_text_default
+            val colorRes = if (isChecked) R.color.task_text_checked else R.color.task_text_default
 
             b.taskEditText.setTextColor(ContextCompat.getColor(ctx, colorRes))
 
@@ -82,10 +76,10 @@ class TaskAdapter(
             if (isChecked) {
                 b.taskEditText.paintFlags = b.taskEditText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             } else {
-                b.taskEditText.paintFlags = b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
+                b.taskEditText.paintFlags =
+                        b.taskEditText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
         }
-
 
         // 3) isPinned durumu
         b.pinIcon.visibility = if (task.isPinned) View.VISIBLE else View.GONE
@@ -94,19 +88,20 @@ class TaskAdapter(
         val base = ctx.resources.getDimensionPixelSize(R.dimen.padding_default)
         val extra = ctx.resources.getDimensionPixelSize(R.dimen.padding_extra)
         b.taskEditText.setPadding(
-            if (task.isPinned) base + extra else base,
-            b.taskEditText.paddingTop,
-            b.taskEditText.paddingEnd,
-            b.taskEditText.paddingBottom
+                if (task.isPinned) base + extra else base,
+                b.taskEditText.paddingTop,
+                b.taskEditText.paddingEnd,
+                b.taskEditText.paddingBottom
         )
 
         // 5) Öncelik Göstergesi
-        val priorityColor = when (task.priority) {
-            1 -> R.color.priority_low
-            2 -> R.color.priority_medium
-            3 -> R.color.priority_high
-            else -> android.R.color.transparent
-        }
+        val priorityColor =
+                when (task.priority) {
+                    1 -> R.color.priority_low
+                    2 -> R.color.priority_medium
+                    3 -> R.color.priority_high
+                    else -> android.R.color.transparent
+                }
         b.priorityIndicator.setBackgroundColor(ContextCompat.getColor(ctx, priorityColor))
         b.priorityIndicator.visibility = if (task.priority > 0) View.VISIBLE else View.GONE
 
@@ -120,9 +115,7 @@ class TaskAdapter(
         b.taskEditText.isEnabled = task.content.isBlank()
 
         // 7) Saat seçici
-        b.timeTextView.setOnClickListener {
-            onTimeClick(task, b)
-        }
+        b.timeTextView.setOnClickListener { onTimeClick(task, b) }
 
         // 8) Görevi kaydet (IME action) + klavyeyi gizle + focus temizleme
         b.taskEditText.setOnEditorActionListener { v, actionId, _ ->
@@ -143,7 +136,7 @@ class TaskAdapter(
                     b.taskNumber.visibility = View.VISIBLE
                     b.taskCheckBox.visibility = View.VISIBLE
                     (ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
-                        .hideSoftInputFromWindow(v.windowToken, 0)
+                            .hideSoftInputFromWindow(v.windowToken, 0)
                     onStatsChanged()
                 }
                 true
@@ -177,11 +170,16 @@ class TaskAdapter(
             popup.menu.add(pinTitle)
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.title) {
-                    "Sil" -> AlertDialog.Builder(ctx)
-                        .setTitle("Görevi Sil")
-                        .setMessage("Bu görevi silmek istediğinize emin misiniz?")
-                        .setPositiveButton("Evet") { _, _ -> onItemDelete?.invoke(position); onStatsChanged() }
-                        .setNegativeButton("Hayır", null).show()
+                    "Sil" ->
+                            AlertDialog.Builder(ctx)
+                                    .setTitle("Görevi Sil")
+                                    .setMessage("Bu görevi silmek istediğinize emin misiniz?")
+                                    .setPositiveButton("Evet") { _, _ ->
+                                        onItemDelete?.invoke(position)
+                                        onStatsChanged()
+                                    }
+                                    .setNegativeButton("Hayır", null)
+                                    .show()
                     "Düzenle" -> {
                         b.taskEditText.visibility = View.VISIBLE
                         b.taskEditText.isEnabled = true
@@ -189,10 +187,26 @@ class TaskAdapter(
                         b.taskEditText.setSelection(b.taskEditText.text.length)
                         b.taskMarqueeText.visibility = View.GONE
                     }
-                    "Yok" -> { task.priority = 0; onTaskUpdate(task); notifyItemChanged(position) }
-                    "Düşük" -> { task.priority = 1; onTaskUpdate(task); notifyItemChanged(position) }
-                    "Orta" -> { task.priority = 2; onTaskUpdate(task); notifyItemChanged(position) }
-                    "Yüksek" -> { task.priority = 3; onTaskUpdate(task); notifyItemChanged(position) }
+                    "Yok" -> {
+                        task.priority = 0
+                        onTaskUpdate(task)
+                        notifyItemChanged(position)
+                    }
+                    "Düşük" -> {
+                        task.priority = 1
+                        onTaskUpdate(task)
+                        notifyItemChanged(position)
+                    }
+                    "Orta" -> {
+                        task.priority = 2
+                        onTaskUpdate(task)
+                        notifyItemChanged(position)
+                    }
+                    "Yüksek" -> {
+                        task.priority = 3
+                        onTaskUpdate(task)
+                        notifyItemChanged(position)
+                    }
                     pinTitle -> {
                         if (task.isPinned) {
                             task.isPinned = false
@@ -227,16 +241,25 @@ class TaskAdapter(
         notifyItemMoved(from, to)
     }
 
-    fun deleteItem(position: Int) {
-        // ListAdapter'da silme işlemi genellikle veriyi güncelleyip submitList yaparak olur.
-        // Callback'ler üzerinden DB silme yapıldığı için viewModel loadTasks çağırdığında 
-        // submitList otomatik olarak güncellenecektir.
-        onStatsChanged()
+    fun deleteItem(position: Int, onDeleted: (() -> Unit)? = null) {
+        val newList = currentList.toMutableList()
+        if (position in newList.indices) {
+            newList.removeAt(position)
+            // notifyItemRemoved(position) // ItemTouchHelper already does this visually
+            submitList(newList) {
+                onDeleted?.invoke()
+            }
+        }
     }
 
-    // Pozisyona göre silinen görevi geri eklemek için
-    fun restoreItem(task: Task, position: Int) {
-        // ViewModel üzerinden ekleme yapınca submitList güncellenecek
+    fun restoreItem(task: Task, position: Int, onRestored: (() -> Unit)? = null) {
+        val newList = currentList.toMutableList()
+        if (position <= newList.size) {
+            newList.add(position, task)
+            submitList(newList) {
+                onRestored?.invoke()
+            }
+        }
     }
 
     fun setTasks(newTasks: List<Task>, commitCallback: (() -> Unit)? = null) {

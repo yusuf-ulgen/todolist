@@ -29,7 +29,7 @@ class NotificationReceiver : BroadcastReceiver() {
             ).apply {
                 description = "Haftalık & Günlük görev bildirimleri"
                 enableLights(true)
-                lightColor = ContextCompat.getColor(context, R.color.primary)
+                lightColor = ContextCompat.getColor(context, R.color.colorAccent)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 200, 200, 200)
             }
@@ -51,7 +51,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
         val notif = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.icon)
-            .setColor(ContextCompat.getColor(context, R.color.primary))
+            .setColor(ContextCompat.getColor(context, R.color.colorAccent))
             .setContentTitle("Görev Zamanı")
             .setContentText(taskContent)
             .setStyle(NotificationCompat.BigTextStyle().bigText(taskContent))

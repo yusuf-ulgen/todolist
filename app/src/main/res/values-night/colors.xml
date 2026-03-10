@@ -3,23 +3,23 @@
     <!-- Dark modda accent rengini de aqua yap -->
     <color name="colorAccent">#00BFA5</color>
 
-    <!-- Gece modu için arka plan: çok koyu gri/siyah -->
-    <color name="creamBackground">#2C2C2C</color>
-    <!-- Ana renk olarak biraz daha koyu krem/ten -->
-    <color name="creamPrimary">#A1887F</color>
-    <color name="creamPrimaryVariant">#6D4C41</color>
-    <!-- Üzerine yazı koyu moda uygun açık renk -->
-    <color name="creamOnBackground">#FFFFFF</color>
+    <!-- Gece modu arka plan: Koyu gri tonu (Material Dark) -->
+    <color name="creamBackground">#121212</color>
+    <!-- Ana renk olarak yumuşak gri / yüzey tonu -->
+    <color name="creamPrimary">#3D3D3D</color>
+    <color name="creamPrimaryVariant">#1F1F1F</color>
+    <!-- Üzerine yazı: Yüksek kontrastlı beyaz -->
+    <color name="creamOnBackground">#E0E0E0</color>
     <color name="creamOnPrimary">#FFFFFF</color>
 
-    <!-- Task metni (dark theme’de hafif gri) -->
-    <color name="task_text_default">#E0E0E0</color>
-    <!-- Task işaretlendiğinde biraz daha koyu/soluk gri -->
+    <!-- Task metni -->
+    <color name="task_text_default">#FFFFFF</color>
     <color name="task_text_checked">#757575</color>
 
-    <color name="stat_text">#EEEEEE</color>
-    <color name="stat_bg_light">@color/stat_bg_dark</color>
-    <color name="stat_text_light">@color/stat_text_dark</color>
+    <!-- Statik metinler için daha belirgin renkler -->
+    <color name="stat_text">#E0E0E0</color>
+    <color name="stat_bg_light">#121212</color>
+    <color name="stat_text_light">#E0E0E0</color>
 
     <color name="light_tab_unselected">#888888</color>
     <color name="light_tab_selected">#1E88E5</color>

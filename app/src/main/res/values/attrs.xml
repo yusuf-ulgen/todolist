@@ -1,10 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="AppTheme">
-        <attr name="pinIcon" format="reference"/>
-        <attr name="tabUnselectedTextColor" format="color" />
-        <attr name="tabSelectedTextColor"   format="color" />
-        <attr name="taskTextDefault" format="reference|color" />
-        <attr name="taskTextChecked" format="reference|color" />
-    </declare-styleable>
+    <!-- Custom theme attributes -->
+    <attr name="taskSupplementaryColor" format="color" />
+    <attr name="controlButtonColor" format="color" />
+    
+    <attr name="tabUnselectedTextColor" format="color" />
+    <attr name="tabSelectedTextColor" format="color" />
+    <attr name="tabIndicatorColor" format="color" />
+    
+    <attr name="taskTextDefault" format="color" />
+    <attr name="taskTextChecked" format="color" />
+    
+    <attr name="gray" format="color" />
+    
+    <attr name="pinIcon" format="reference" />
+
+    <attr name="feedbackBackground" format="color" />
+    <attr name="feedbackHeaderBackground" format="color" />
+    <attr name="feedbackHeaderText" format="color" />
+    <attr name="feedbackInputBackground" format="color" />
+    <attr name="feedbackInputText" format="color" />
+    <attr name="feedbackInputHint" format="color" />
+    <attr name="snackbarActionColor" format="color" />
 </resources>

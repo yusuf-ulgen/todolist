@@ -17,8 +17,8 @@ class TaskRepository(
     
     suspend fun getTasksByListId(listId: Long): List<Task> = taskDao.getTasksByListId(listId)
     
-    suspend fun getTasksByWeekday(uid: String, day: String): List<Task> = 
-        taskDao.getTasksByWeekday(uid, day)
+    suspend fun getTasksByWeekday(uid: String, day: String, listId: Long): List<Task> = 
+        taskDao.getTasksByWeekday(uid, day, listId)
     
     suspend fun insertTask(task: Task) = taskDao.insertTask(task)
     

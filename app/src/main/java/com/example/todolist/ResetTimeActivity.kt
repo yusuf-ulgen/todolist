@@ -12,13 +12,8 @@ import android.provider.Settings
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import com.example.todolist.databinding.ActivityResetTimeBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 
 class ResetTimeActivity : AppCompatActivity() {
@@ -32,25 +27,20 @@ class ResetTimeActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val db = AppDatabase.getDatabase(applicationContext)
-        val repository = TaskRepository(
-            db.taskDao(),
-            db.todolistDao(),
-            db.dailyStatDao(),
-            db.taskHistoryDao(),
-            db.notificationPrefDao(),
-            db.resetTimeDao()
-        )
+        val repository =
+                TaskRepository(
+                        db.taskDao(),
+                        db.todolistDao(),
+                        db.dailyStatDao(),
+                        db.taskHistoryDao(),
+                        db.notificationPrefDao(),
+                        db.resetTimeDao()
+                )
         val factory = TaskViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
-        // 1) TimePicker'ı 24 saat formatına al ve rengini ayarla
+        // 1) TimePicker'ı 24 saat formatına al
         binding.timePicker.setIs24HourView(true)
-        val color = ContextCompat.getColor(this, R.color.creamOnBackground)
-        listOf("hour", "minute").forEach { name ->
-            val id = Resources.getSystem().getIdentifier(name, "id", "android")
-            binding.timePicker.findViewById<TextView>(id)
-                ?.setTextColor(color)
-        }
 
         // Observe reset time
         viewModel.resetTime.observe(this) { saved ->
@@ -64,18 +54,13 @@ class ResetTimeActivity : AppCompatActivity() {
         viewModel.loadResetTime()
 
         binding.saveResetTimeButton.setOnClickListener {
-            val hour   = binding.timePicker.hour
+            val hour = binding.timePicker.hour
             val minute = binding.timePicker.minute
             val dayPos = binding.weekDaySpinner.selectedItemPosition
 
             // 1) Room’a upsert et
             viewModel.saveResetTime(
-                ResetTime(
-                    id = 0,
-                    resetHour = hour,
-                    resetMinute = minute,
-                    resetDay = dayPos
-                )
+                    ResetTime(id = 0, resetHour = hour, resetMinute = minute, resetDay = dayPos)
             )
 
             // 2) Haftalık alarmı planla
@@ -83,11 +68,14 @@ class ResetTimeActivity : AppCompatActivity() {
 
             // 3) Geri bildirim
             Toast.makeText(
-                this,
-                "Reset saati kaydedildi: %02d:%02d, ${binding.weekDaySpinner.selectedItem}"
-                    .format(hour, minute),
-                Toast.LENGTH_SHORT
-            ).show()
+                            this,
+                            "Reset saati kaydedildi: %02d:%02d, ${binding.weekDaySpinner.selectedItem}".format(
+                                    hour,
+                                    minute
+                            ),
+                            Toast.LENGTH_SHORT
+                    )
+                    .show()
             showSavedTime(hour, minute)
         }
     }
@@ -103,55 +91,51 @@ class ResetTimeActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!am.canScheduleExactAlarms()) {
-                Toast.makeText(
-                    this,
-                    "Uygulamaya alarm kurma izni vermelisiniz.",
-                    Toast.LENGTH_LONG
-                ).show()
-                startActivity(
-                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                )
+                Toast.makeText(this, "Uygulamaya alarm kurma izni vermelisiniz.", Toast.LENGTH_LONG)
+                        .show()
+                startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
                 return
             }
         }
 
         val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, ResetReceiver::class.java)
-        val pi = PendingIntent.getBroadcast(
-            this, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pi =
+                PendingIntent.getBroadcast(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
 
         // Spinner’daki index’e göre Calendar gününü al
-        val dow = when (resetDay) {
-            0 -> Calendar.MONDAY
-            1 -> Calendar.TUESDAY
-            2 -> Calendar.WEDNESDAY
-            3 -> Calendar.THURSDAY
-            4 -> Calendar.FRIDAY
-            5 -> Calendar.SATURDAY
-            6 -> Calendar.SUNDAY
-            else -> Calendar.MONDAY
-        }
+        val dow =
+                when (resetDay) {
+                    0 -> Calendar.MONDAY
+                    1 -> Calendar.TUESDAY
+                    2 -> Calendar.WEDNESDAY
+                    3 -> Calendar.THURSDAY
+                    4 -> Calendar.FRIDAY
+                    5 -> Calendar.SATURDAY
+                    6 -> Calendar.SUNDAY
+                    else -> Calendar.MONDAY
+                }
 
         // Şimdiki zaman ve hedef zaman
         val now = Calendar.getInstance()
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, dow)
-            set(Calendar.HOUR_OF_DAY, resetHour)
-            set(Calendar.MINUTE, resetMinute)
-            set(Calendar.SECOND, 0)
-            // Eğer hedef geçtiyse bir hafta ileri al
-            if (timeInMillis <= now.timeInMillis) {
-                add(Calendar.WEEK_OF_YEAR, 1)
-            }
-        }
+        val cal =
+                Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_WEEK, dow)
+                    set(Calendar.HOUR_OF_DAY, resetHour)
+                    set(Calendar.MINUTE, resetMinute)
+                    set(Calendar.SECOND, 0)
+                    // Eğer hedef geçtiyse bir hafta ileri al
+                    if (timeInMillis <= now.timeInMillis) {
+                        add(Calendar.WEEK_OF_YEAR, 1)
+                    }
+                }
 
         // Haftalık alarm
-        am.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            cal.timeInMillis,
-            pi
-        )
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
     }
 }

@@ -2,12 +2,15 @@ package com.example.todolist
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -170,25 +173,39 @@ class ListelerimActivity : AppCompatActivity() {
     }
 
     private fun showFeedbackDialog() {
-        val view = layoutInflater.inflate(R.layout.feedback_dialog, null)
-        val titleEt = view.findViewById<EditText>(R.id.feedbackTitleEditText)
-        val msgEt = view.findViewById<EditText>(R.id.feedbackMessageEditText)
+        val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
+        val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
+        val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
 
-        AlertDialog.Builder(this)
-            .setTitle("Problem Başlığı")
-            .setView(view)
+        AlertDialog.Builder(this, R.style.CustomAlertDialog)
+            .setView(dialogView)
             .setPositiveButton("İleri") { _, _ ->
-                val title = titleEt.text.toString().trim()
-                val msg = msgEt.text.toString().trim()
-                if (title.isEmpty() || msg.isEmpty()) {
-                    if (title.isEmpty()) titleEt.error = "Başlık girin"
-                    if (msg.isEmpty()) msgEt.error = "Mesaj girin"
+                val title = titleEditText.text.toString().trim()
+                val message = messageEditText.text.toString().trim()
+
+                if (title.isEmpty()) {
+                    titleEditText.error = "Başlık boş olamaz"
                     return@setPositiveButton
                 }
-                submitFeedback(title, msg)
+                if (message.isEmpty()) {
+                    messageEditText.error = "Mesaj boş olamaz"
+                    return@setPositiveButton
+                }
+                submitFeedback(title, message)
             }
             .setNegativeButton("İptal", null)
             .show()
+            .apply {
+                val typedValue = android.util.TypedValue()
+                theme.resolveAttribute(R.attr.feedbackHeaderBackground, typedValue, true)
+                val bgColor = typedValue.data
+                theme.resolveAttribute(R.attr.feedbackHeaderText, typedValue, true)
+                val textColor = typedValue.data
+
+                window?.findViewById<View>(androidx.appcompat.R.id.buttonPanel)?.setBackgroundColor(bgColor)
+                getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(textColor)
+                getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(textColor)
+            }
     }
 
     private fun submitFeedback(title: String, message: String) {

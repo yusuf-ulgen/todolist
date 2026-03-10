@@ -67,7 +67,7 @@ class NewListActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             // Listeyi veritabanına ekle
-            viewModel.updateLists(newList)
+            viewModel.insertList(newList)
 
             // Liste kaydedildikten sonra ListelerimActivity'ye dön
             withContext(Dispatchers.Main) {

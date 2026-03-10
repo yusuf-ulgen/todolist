@@ -1,57 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/colorSurface"
-    android:padding="16dp">
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp">
 
-    <!-- Problem Başlığı -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/feedbackTitleLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:boxBackgroundMode="outline"
-        app:boxStrokeColor="?attr/colorPrimaryVariant"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:background="?attr/feedbackBackground"
+        android:orientation="vertical">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/feedbackTitleEditText"
+        <!-- Header -->
+        <LinearLayout
+            android:id="@+id/feedbackHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Problem Başlığı"
-            android:inputType="textCapSentences"
-            android:textColor="?attr/colorOnBackground"
-            android:textColorHint="?attr/colorOnBackground" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:background="?attr/feedbackHeaderBackground"
+            android:padding="16dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Problem Başlığı"
+                android:textColor="?attr/feedbackHeaderText"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-    <!-- Problem Mesajı -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/feedbackMessageLayout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:boxBackgroundMode="outline"
-        app:boxStrokeColor="@color/creamPrimaryVariant"
-        app:layout_constraintTop_toBottomOf="@id/feedbackTitleLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/feedbackMessageEditText"
+        <!-- Content Area -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Problemi Girin..."
-            android:inputType="textCapSentences|textMultiLine"
-            android:lines="4"
-            android:gravity="start"
-            android:textColor="@color/creamOnBackground"
-            android:textColorHint="@color/creamOnBackground" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:orientation="vertical"
+            android:padding="20dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/feedbackTitleLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:boxBackgroundColor="?attr/feedbackInputBackground"
+                app:hintTextColor="?attr/feedbackInputHint"
+                app:boxStrokeColor="?attr/feedbackHeaderText">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/feedbackTitleEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Problem Başlığı"
+                    android:textColor="?attr/feedbackInputText"
+                    android:textColorHint="?attr/feedbackInputHint" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/feedbackMessageLayout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:boxBackgroundColor="?attr/feedbackInputBackground"
+                app:hintTextColor="?attr/feedbackInputHint"
+                app:boxStrokeColor="?attr/feedbackHeaderText">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/feedbackMessageEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Problemi Girin..."
+                    android:gravity="top"
+                    android:lines="4"
+                    android:textColor="?attr/feedbackInputText"
+                    android:textColorHint="?attr/feedbackInputHint" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Footer (Buttons) - will be handled by AlertDialog typically, 
+             but we style them in code. Or if the user wants black background for buttons too: -->
+        <LinearLayout
+            android:id="@+id/feedbackFooter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#000000"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:padding="8dp"
+            android:visibility="gone">
+            <!-- These are placeholders if we were implementing our own buttons, 
+                 but we'll use AlertDialog buttons for now and style them. 
+                 If the user strictly wants the buttons INSIDE a black area, 
+                 we might need a custom dialog. -->
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

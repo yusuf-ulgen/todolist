@@ -6,28 +6,30 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <!-- Mor/pembe yerine aqua tonunu kullan -->
     <color name="colorAccent">#00BFA5</color>
-    <color name="colorBackground">#FFFFFF</color>
-    <color name="colorText">#212121</color>
+    <color name="colorBackground">#FFFDF5</color>
+    <color name="colorText">#4E342E</color>
     <color name="gray">#9E9E9E</color>
-    <color name="primary">#9E9E9E</color>
+    <color name="green_accent">#00BFA5</color>
+    <color name="brown_accent">#5D4037</color>
 
-    <!-- Cream teması renkleri -->
-    <color name="creamBackground">#FFF8E1</color>
-    <color name="creamPrimary">#D2B48C</color>
-    <color name="creamPrimaryVariant">#B9976B</color>
-    <color name="creamOnBackground">#3E2723</color>
-    <color name="creamOnPrimary">#8C7E5E</color>
+    <!-- Cream teması renkleri (Day) -->
+    <color name="creamBackground">#FFFDF5</color>
+    <color name="creamPrimary">#E6D5C3</color>
+    <color name="creamPrimaryVariant">#D7C4B1</color>
+    <color name="creamOnBackground">#4E342E</color>
+    <color name="creamOnPrimary">#3E2723</color>
 
-    <!-- Task metni (light theme’de koyu kahve) -->
-    <color name="task_text_default">#3E2723</color>
-    <!-- Task işaretlendiğinde (light theme’de strike‐through zaten uyguluyorsun, renk hafif soluk) -->
+    <!-- Task metni -->
+    <color name="task_text_default">#4E342E</color>
     <color name="task_text_checked">#A1887F</color>
 
-    <color name="stat_text">#3E2723</color>
-    <color name="stat_bg_light">#FFF8E1</color>      <!-- açık modda arka plan -->
-    <color name="stat_bg_dark">#121212</color>       <!-- koyu modda arka plan -->
-    <color name="stat_text_light">#3E2723</color>    <!-- açık modda metin -->
-    <color name="stat_text_dark">#EEEEEE</color>     <!-- koyu modda metin -->
+    <color name="stat_text">#4E342E</color>
+    <color name="stat_bg_light">#FFFDF5</color>
+    <color name="stat_bg_dark">#1A1A1A</color>
+    <color name="stat_text_light">#4E342E</color>
+    <color name="stat_text_dark">#F5F5F5</color>
+    
+    <color name="snackbar_action_color">#5D4037</color>     <!-- Daha yumuşak kahverengi -->
 
     <color name="light_tab_unselected">#888888</color>
     <color name="light_tab_selected">#1E88E5</color>
@@ -41,4 +43,11 @@
     <color name="priority_low">#4CAF50</color> <!-- Yeşil -->
     <color name="priority_medium">#FF9800</color> <!-- Turuncu -->
     <color name="priority_high">#F44336</color> <!-- Kırmızı -->
+
+    <!-- Theme specific button colors -->
+    <color name="button_text_light">#5D4037</color>
+    <color name="button_text_dark">#00BFA5</color>
+
+    <!-- Visibility fixes for dark theme -->
+    <color name="task_supplementary_dark">#BDBDBD</color>
 </resources>

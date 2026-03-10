@@ -70,7 +70,6 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation ("com.google.android.material:material")
 
-    implementation("nl.dionsegijn:konfetti-xml:2.1.0-beta01")
-    implementation("nl.dionsegijn:konfetti-core:2.0.5")
     implementation("nl.dionsegijn:konfetti-xml:2.0.5")
+    implementation("nl.dionsegijn:konfetti-core:2.0.5")
 }

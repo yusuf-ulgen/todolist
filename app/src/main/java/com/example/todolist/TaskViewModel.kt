@@ -63,6 +63,14 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    fun upsertDailyStat(stat: DailyStat) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.upsertDailyStat(stat)
+            }
+        }
+    }
+
     fun loadTasksByListId(listId: Long) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -72,21 +80,26 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun loadWeeklyTasksForDay(uid: String, day: String) {
+    fun loadWeeklyTasksForDay(uid: String, day: String, listId: Long) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getTasksByWeekday(uid, day)
+                repository.getTasksByWeekday(uid, day, listId)
             }
             _weeklyTasks.value = result
         }
     }
 
-    fun addTask(task: Task) {
+    fun addTask(task: Task, onCompleted: (() -> Unit)? = null) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 repository.insertTask(task)
             }
-            // Optional: reload tasks after adding, or manual update
+            if (task.weekday.isNullOrBlank()) {
+                loadTasksByListId(task.listId)
+            } else {
+                task.userId?.let { loadWeeklyTasksForDay(it, task.weekday!!, task.listId) }
+            }
+            onCompleted?.invoke()
         }
     }
 
@@ -95,6 +108,14 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.updateTask(task)
             }
+            if (task.weekday.isNullOrBlank()) {
+                loadTasksByListId(task.listId)
+            } else {
+                val uid = task.userId 
+                if (uid.isNotEmpty() && !task.weekday.isNullOrEmpty()) {
+                    loadWeeklyTasksForDay(uid, task.weekday!!, task.listId)
+                }
+            }
         }
     }
 
@@ -102,6 +123,14 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 repository.deleteTask(task)
+            }
+            if (task.weekday.isNullOrBlank()) {
+                loadTasksByListId(task.listId)
+            } else {
+                val uid = task.userId
+                if (uid.isNotEmpty() && !task.weekday.isNullOrEmpty()) {
+                    loadWeeklyTasksForDay(uid, task.weekday!!, task.listId)
+                }
             }
         }
     }
@@ -129,6 +158,15 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.updateList(*lists)
             }
+        }
+    }
+
+    fun insertList(todolist: Todolist) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.insertList(todolist)
+            }
+            loadAllLists() // Refresh LiveData
         }
     }
 }
