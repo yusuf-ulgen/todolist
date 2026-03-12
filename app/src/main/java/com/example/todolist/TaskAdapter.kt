@@ -27,10 +27,26 @@ class TaskAdapter(
     inner class TaskViewHolder(val binding: ItemTaskBinding) :
             RecyclerView.ViewHolder(binding.root)
     var onItemDelete: ((position: Int) -> Unit)? = null
+    
+    // Sürükleme (drag) sırasında görsel sıralamayı takip etmek için gölge liste
+    private var shadowList: MutableList<Task> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
         val binding = ItemTaskBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return TaskViewHolder(binding)
+    }
+
+    @SuppressLint("SetTextI18n")
+    override fun onBindViewHolder(
+            holder: TaskViewHolder,
+            position: Int,
+            payloads: MutableList<Any>
+    ) {
+        if (payloads.contains("UPDATE_RANK")) {
+            holder.binding.taskNumber.text = (position + 1).toString()
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     @SuppressLint("SetTextI18n")
@@ -234,11 +250,17 @@ class TaskAdapter(
     override fun getItemCount() = currentList.size
 
     fun moveItem(from: Int, to: Int) {
-        // ListAdapter ile move işlemi biraz farklıdır, genellikle submitList ile yapılır.
-        // Ancak bu app'te drag & drop sırasında UI'ı hızlı güncellemek için
-        // geçici bir liste kullanabiliriz veya her harekette submitList yapabiliriz.
-        // Şimdilik notifyItemMoved yeterli olabilir ama DB güncellemesi zaten yapılıyor.
-        notifyItemMoved(from, to)
+        if (from == to) return
+        if (from in shadowList.indices && to in shadowList.indices) {
+            java.util.Collections.swap(shadowList, from, to)
+            notifyItemMoved(from, to)
+            
+            // Sıra numaralarını anlık güncelle (flicker yapmadan)
+            // Sadece yer değiştiren iki öğeyi değil, aradaki her şeyi güncellemek en sağlamı
+            val start = Math.min(from, to)
+            val count = Math.abs(from - to) + 1
+            notifyItemRangeChanged(start, count, "UPDATE_RANK")
+        }
     }
 
     fun deleteItem(position: Int, onDeleted: (() -> Unit)? = null) {
@@ -263,10 +285,11 @@ class TaskAdapter(
     }
 
     fun setTasks(newTasks: List<Task>, commitCallback: (() -> Unit)? = null) {
+        shadowList = newTasks.toMutableList()
         submitList(newTasks, commitCallback)
     }
 
-    fun getTasks() = currentList
+    fun getTasks(): List<Task> = shadowList
 }
 
 class TaskDiffCallback : DiffUtil.ItemCallback<Task>() {

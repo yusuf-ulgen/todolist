@@ -32,6 +32,7 @@ class ListelerimActivity : AppCompatActivity() {
     private lateinit var adapter: ListelerimAdapter
     private lateinit var viewModel: TaskViewModel
     private val lists = mutableListOf<Todolist>()
+    private var isMoving = false
 
     companion object {
         const val DEFAULT_LIST_ID = 1L
@@ -103,17 +104,40 @@ class ListelerimActivity : AppCompatActivity() {
                 if (lists[from].id == DEFAULT_LIST_ID || lists[to].id == DEFAULT_LIST_ID) {
                     return false
                 }
+                
+                isMoving = true
                 Collections.swap(lists, from, to)
                 adapter.notifyItemMoved(from, to)
-
-
-                lifecycleScope.launch(Dispatchers.IO) {
-                    lists.forEachIndexed { idx, todoList ->
-                        todoList.sortOrder = idx
-                    }
-                    viewModel.updateLists(*lists.toTypedArray())
-                }
                 return true
+            }
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                
+                // 1) Listeyi al ve kopyala (Deep Copy)
+                val rawList = lists.toList()
+                val updated = rawList.map { it.copy() }
+                
+                // 2) Animasyon kilidi
+                val originalAnimator = recyclerView.itemAnimator
+                recyclerView.itemAnimator = null
+                
+                updated.forEachIndexed { idx, todoList ->
+                    todoList.sortOrder = idx
+                }
+                
+                // 3) Senkron UI Güncelleme (Gecikmesiz)
+                // ListelerimAdapter basit bir RecyclerView.Adapter, notifyDataSetChanged yeterli
+                // Ancak elimizdeki 'lists' bir MutableList. Onu güncelleyip notify ediyoruz.
+                lists.clear()
+                lists.addAll(updated)
+                adapter.notifyDataSetChanged()
+                
+                viewModel.updateLists(*updated.toTypedArray()) {
+                    isMoving = false
+                    viewModel.loadAllLists() 
+                    recyclerView.post { recyclerView.itemAnimator = originalAnimator }
+                }
             }
             override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) = Unit
         }).attachToRecyclerView(binding.recyclerView)
@@ -125,6 +149,7 @@ class ListelerimActivity : AppCompatActivity() {
 
         // Observe lists
         viewModel.lists.observe(this) { updatedLists ->
+            if (isMoving) return@observe
             lists.clear()
             lists.addAll(updatedLists.filter { it.id != DEFAULT_LIST_ID })
             adapter.notifyDataSetChanged()
@@ -176,36 +201,39 @@ class ListelerimActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
         val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
         val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
+        val nextButton = dialogView.findViewById<android.view.View>(R.id.feedbackNextButton)
+        val cancelButton = dialogView.findViewById<android.view.View>(R.id.feedbackCancelButton)
 
-        AlertDialog.Builder(this, R.style.CustomAlertDialog)
-            .setView(dialogView)
-            .setPositiveButton("İleri") { _, _ ->
-                val title = titleEditText.text.toString().trim()
-                val message = messageEditText.text.toString().trim()
+        val dialog = android.app.Dialog(this)
+        dialog.setContentView(dialogView)
+        
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90).toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
 
-                if (title.isEmpty()) {
-                    titleEditText.error = "Başlık boş olamaz"
-                    return@setPositiveButton
-                }
-                if (message.isEmpty()) {
-                    messageEditText.error = "Mesaj boş olamaz"
-                    return@setPositiveButton
-                }
-                submitFeedback(title, message)
+        nextButton.setOnClickListener {
+            val title = titleEditText.text.toString().trim()
+            val message = messageEditText.text.toString().trim()
+
+            if (title.isEmpty()) {
+                titleEditText.error = "Başlık boş olamaz"
+                return@setOnClickListener
             }
-            .setNegativeButton("İptal", null)
-            .show()
-            .apply {
-                val typedValue = android.util.TypedValue()
-                theme.resolveAttribute(R.attr.feedbackHeaderBackground, typedValue, true)
-                val bgColor = typedValue.data
-                theme.resolveAttribute(R.attr.feedbackHeaderText, typedValue, true)
-                val textColor = typedValue.data
-
-                window?.findViewById<View>(androidx.appcompat.R.id.buttonPanel)?.setBackgroundColor(bgColor)
-                getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(textColor)
-                getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(textColor)
+            if (message.isEmpty()) {
+                messageEditText.error = "Mesaj boş olamaz"
+                return@setOnClickListener
             }
+            dialog.dismiss()
+            submitFeedback(title, message)
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun submitFeedback(title: String, message: String) {

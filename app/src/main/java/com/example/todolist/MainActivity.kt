@@ -203,7 +203,13 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         },
-                        onTaskUpdate = { task -> viewModel.updateTask(task) }
+                        onTaskUpdate = { task -> 
+                            viewModel.updateTask(task)
+                            // Pin durumu değiştiğinde bildirimi yeniden zamanla (isPinned bilgisini güncellemek için)
+                            if (task.time.isNotBlank() && task.time != "Saat") {
+                                scheduleTaskNotification(task)
+                            }
+                        }
                 )
         binding.includeDaily.todoRecyclerView.adapter = adapter
 
@@ -220,7 +226,13 @@ class MainActivity : AppCompatActivity() {
                         taskDao,
                         onStatsChanged = { updateWeeklyStats(weeklyAdapter.currentList.count { it.isChecked }, weeklyAdapter.currentList.size) },
                         onTimeClick = { task, b -> showTimePickerAndSave(task, b) },
-                        onTaskUpdate = { task -> viewModel.updateTask(task) }
+                        onTaskUpdate = { task -> 
+                            viewModel.updateTask(task)
+                            // Pin durumu değişmiş olabilir, bildirimi tazele
+                            if (task.time.isNotBlank() && task.time != "Saat") {
+                                scheduleTaskNotification(task)
+                            }
+                        }
                 )
         binding.includeWeekly.weeklyTasksRecyclerView.adapter = weeklyAdapter
 
@@ -308,9 +320,6 @@ class MainActivity : AppCompatActivity() {
                             vh: RecyclerView.ViewHolder,
                             target: RecyclerView.ViewHolder
                     ): Boolean {
-                        if (isMoving) return false
-                        isMoving = true
-
                         val from = vh.adapterPosition
                         val to = target.adapterPosition
                         val list = adapter.getTasks()
@@ -319,17 +328,11 @@ class MainActivity : AppCompatActivity() {
                         if ((from < pinnedCount && to < pinnedCount) ||
                                         (from >= pinnedCount && to >= pinnedCount)
                         ) {
-                            // 1) UI’da taşı
+                            isMoving = true
+                            // UI'da yer değiştir
                             adapter.moveItem(from, to)
-                            // 2) Yeni sortOrder’ları ayarla
-                            adapter.getTasks().forEachIndexed { idx, task ->
-                                task.sortOrder = idx
-                                viewModel.updateTask(task)
-                            }
-                            scheduleMoveReset()
                             return true
                         }
-                        scheduleMoveReset()
                         return false
                     }
 
@@ -338,7 +341,34 @@ class MainActivity : AppCompatActivity() {
                             viewHolder: RecyclerView.ViewHolder
                     ) {
                         super.clearView(recyclerView, viewHolder)
-                        recyclerView.post { adapter.notifyItemRangeChanged(0, adapter.itemCount) }
+                        
+                        // 1) Listeyi al ve kopyala (Deep Copy)
+                        val rawList = adapter.getTasks()
+                        val updatedList = rawList.map { it.copy() }
+                        
+                        updatedList.forEachIndexed { idx, task ->
+                            task.sortOrder = idx
+                        }
+                        
+                        // 2) Animasyon kilidi: "flashback" (gereksiz geri zıplama) efektini engelle
+                        val originalAnimator = recyclerView.itemAnimator
+                        recyclerView.itemAnimator = null
+                        
+                        // 3) SENKRON GÜNCELLEME: Veritabanını beklemeden listeyi adaptöre ZINK diye ver
+                        adapter.setTasks(updatedList)
+                        
+                        // Yerel listeyi güncelle
+                        dailyTasksList = updatedList
+                        
+                        viewModel.updateTasks(*updatedList.toTypedArray()) {
+                            isMoving = false
+                            filterAndDisplayTasks()
+                            // İşlem bitince animatörü geri yükle
+                            recyclerView.post { recyclerView.itemAnimator = originalAnimator }
+                        }
+                        
+                        // UI'daki numaraları anlık tazele
+                        adapter.notifyItemRangeChanged(0, adapter.itemCount, "UPDATE_RANK")
                     }
 
                     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -398,31 +428,44 @@ class MainActivity : AppCompatActivity() {
                         val from = vh.adapterPosition
                         val to = target.adapterPosition
 
-                        if (isMoving) return false
-                        isMoving = true
-                        val list = adapter.getTasks()
+                        val list = weeklyAdapter.getTasks()
                         val pinnedCount = list.count { it.isPinned }
                         if ((from < pinnedCount && to < pinnedCount) ||
                                         (from >= pinnedCount && to >= pinnedCount)
                         ) {
-                            // 1) UI’da taşı
+                            isMoving = true
+                            
+                            // UI’da taşı
                             weeklyAdapter.moveItem(from, to)
-                            // 2) Her öğeye yeni sortOrder ata
-                            weeklyAdapter.getTasks().forEachIndexed { idx, task ->
-                                task.sortOrder = idx
-                                viewModel.updateTask(task)
-                            }
-                            scheduleMoveReset()
                             return true
                         }
-                        scheduleMoveReset()
                         return false
                     }
 
                     override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
                         super.clearView(rv, vh)
-                        // taşıma sonrası trigger için
-                        weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount)
+                        
+                        val rawList = weeklyAdapter.getTasks()
+                        val updatedList = rawList.map { it.copy() }
+                        
+                        updatedList.forEachIndexed { idx, task ->
+                            task.sortOrder = idx
+                        }
+                        
+                        val originalAnimator = rv.itemAnimator
+                        rv.itemAnimator = null
+                        
+                        // Senkron güncelleme
+                        weeklyAdapter.setTasks(updatedList)
+                        weeklyTasksList = updatedList
+                        
+                        viewModel.updateTasks(*updatedList.toTypedArray()) {
+                            isMoving = false
+                            filterAndDisplayTasks()
+                            rv.post { rv.itemAnimator = originalAnimator }
+                        }
+                        
+                        weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount, "UPDATE_RANK")
                     }
 
                     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -690,10 +733,6 @@ class MainActivity : AppCompatActivity() {
                 .show()
     }
 
-    private fun scheduleMoveReset() {
-        moveResetHandler.removeCallbacksAndMessages(null)
-        moveResetHandler.postDelayed({ isMoving = false }, 150)
-    }
 
     override fun onResume() {
         super.onResume()
@@ -711,6 +750,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun filterAndDisplayTasks() {
+        if (isMoving) return // Sürükleme sırasında listeyi yenileyip "snap-back" yapma
+        
         if (binding.includeWeekly.root.visibility == View.VISIBLE) {
             val filtered =
                     weeklyTasksList.filter {
@@ -917,38 +958,44 @@ class MainActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.feedback_dialog, null)
         val titleEditText = dialogView.findViewById<EditText>(R.id.feedbackTitleEditText)
         val messageEditText = dialogView.findViewById<EditText>(R.id.feedbackMessageEditText)
+        val nextButton = dialogView.findViewById<View>(R.id.feedbackNextButton)
+        val cancelButton = dialogView.findViewById<View>(R.id.feedbackCancelButton)
 
-        AlertDialog.Builder(this, R.style.CustomAlertDialog)
-                .setView(dialogView)
-                .setPositiveButton("İleri") { _, _ ->
-                    val title = titleEditText.text.toString().trim()
-                    val message = messageEditText.text.toString().trim()
+        val dialog = android.app.Dialog(this)
+        dialog.setContentView(dialogView)
+        
+        // Köşelerin sızmasını engellemek için arka planı şeffaf yap
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        
+        // Diyaloğun genişliğini ayarla (ekranın %90'ı)
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90).toInt(),
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
 
-                    if (title.isEmpty()) {
-                        titleEditText.error = "Lütfen bir başlık girin!"
-                        titleEditText.requestFocus()
-                        return@setPositiveButton
-                    }
-                    if (message.isEmpty()) {
-                        messageEditText.error = "Lütfen probleminizi girin!"
-                        messageEditText.requestFocus()
-                        return@setPositiveButton
-                    }
-                    showSubmitFeedbackDialog(title, message)
-                }
-                .setNegativeButton("İptal", null)
-                .show()
-                .apply {
-                    val typedValue = android.util.TypedValue()
-                    theme.resolveAttribute(R.attr.feedbackHeaderBackground, typedValue, true)
-                    val bgColor = typedValue.data
-                    theme.resolveAttribute(R.attr.feedbackHeaderText, typedValue, true)
-                    val textColor = typedValue.data
+        nextButton.setOnClickListener {
+            val title = titleEditText.text.toString().trim()
+            val message = messageEditText.text.toString().trim()
 
-                    window?.findViewById<View>(androidx.appcompat.R.id.buttonPanel)?.setBackgroundColor(bgColor)
-                    getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(textColor)
-                    getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(textColor)
-                }
+            if (title.isEmpty()) {
+                titleEditText.error = "Lütfen bir başlık girin!"
+                titleEditText.requestFocus()
+                return@setOnClickListener
+            }
+            if (message.isEmpty()) {
+                messageEditText.error = "Lütfen probleminizi girin!"
+                messageEditText.requestFocus()
+                return@setOnClickListener
+            }
+            dialog.dismiss()
+            showSubmitFeedbackDialog(title, message)
+        }
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun showSubmitFeedbackDialog(title: String, message: String) {
@@ -1109,6 +1156,16 @@ class MainActivity : AppCompatActivity() {
             it.cancel()
         }
     }
+    
+    private fun scheduleTaskNotification(task: Task) {
+        if (task.time.isBlank() || task.time == "Saat") return
+        val parts = task.time.split(":")
+        if (parts.size == 2) {
+            val hour = parts[0].toIntOrNull() ?: return
+            val minute = parts[1].toIntOrNull() ?: return
+            scheduleTaskNotification(task, hour, minute)
+        }
+    }
 
     @SuppressLint("NewApi")
     private fun scheduleTaskNotification(task: Task, hour: Int, minute: Int) {
@@ -1136,6 +1193,7 @@ class MainActivity : AppCompatActivity() {
                     putExtra("taskId", task.id.toInt())
                     putExtra("taskContent", task.content)
                     putExtra("listId", task.listId)
+                    putExtra("isPinned", task.isPinned) // Pin bilgisini ekle
                 }
 
         val pi =

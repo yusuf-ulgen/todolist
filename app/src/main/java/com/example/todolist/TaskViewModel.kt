@@ -119,6 +119,35 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
+    fun updateTasks(vararg tasks: Task, onCompleted: (() -> Unit)? = null) {
+        if (tasks.isEmpty()) {
+            onCompleted?.invoke()
+            return
+        }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.updateTasks(*tasks)
+            }
+            // Tüm güncellemeler bittikten sonra sadece bir kez yükleme yapıyoruz
+            val first = tasks[0]
+            if (first.weekday.isNullOrBlank()) {
+                val result = withContext(Dispatchers.IO) {
+                    repository.getTasksByListId(first.listId)
+                }
+                _tasks.value = result
+            } else {
+                val uid = first.userId
+                if (uid.isNotEmpty() && !first.weekday.isNullOrEmpty()) {
+                    val result = withContext(Dispatchers.IO) {
+                        repository.getTasksByWeekday(uid, first.weekday!!, first.listId)
+                    }
+                    _weeklyTasks.value = result
+                }
+            }
+            onCompleted?.invoke()
+        }
+    }
+
     fun deleteTask(task: Task) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -153,11 +182,12 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun updateLists(vararg lists: Todolist) {
+    fun updateLists(vararg lists: Todolist, onCompleted: (() -> Unit)? = null) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 repository.updateList(*lists)
             }
+            onCompleted?.invoke()
         }
     }
 

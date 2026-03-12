@@ -13,6 +13,9 @@ interface TaskDao {
     @Update
     suspend fun updateTask(task: Task)
 
+    @Update
+    suspend fun updateTasks(vararg tasks: Task)
+
     @Query(" SELECT * FROM tasks ORDER BY isPinned DESC, sortOrder ASC")
     suspend fun getAllTasks(): List<Task>
 

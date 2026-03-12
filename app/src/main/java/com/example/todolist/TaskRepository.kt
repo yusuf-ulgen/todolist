@@ -25,6 +25,8 @@ class TaskRepository(
     suspend fun deleteTask(task: Task) = taskDao.deleteTask(task)
     
     suspend fun updateTask(task: Task) = taskDao.updateTask(task)
+
+    suspend fun updateTasks(vararg tasks: Task) = taskDao.updateTasks(*tasks)
     
     suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task? = 
         taskDao.getTaskByTimeAndUserId(time, userId)
