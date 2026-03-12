@@ -1143,12 +1143,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelTaskNotification(task: Task) {
-        val requestCode = ((task.id shl 3) + (task.weekday?.hashCode() ?: 0)).toInt()
+        // ID standardını kur: taskId (id Long'un son 32 biti)
+        val requestCode = task.id.toInt()
+        val intent = Intent(this, NotificationReceiver::class.java)
         val pi =
                 PendingIntent.getBroadcast(
                         this,
                         requestCode,
-                        Intent(this, NotificationReceiver::class.java),
+                        intent,
                         PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
                 )
         pi?.let {
@@ -1193,7 +1195,7 @@ class MainActivity : AppCompatActivity() {
                     putExtra("taskId", task.id.toInt())
                     putExtra("taskContent", task.content)
                     putExtra("listId", task.listId)
-                    putExtra("isPinned", task.isPinned) // Pin bilgisini ekle
+                    putExtra("isPinned", task.isPinned)
                 }
 
         val pi =
