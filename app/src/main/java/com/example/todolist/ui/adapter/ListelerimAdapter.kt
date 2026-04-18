@@ -26,26 +26,24 @@ class ListelerimAdapter(
         holder.binding.listItemButton.apply {
             text = todo.name
             setOnClickListener { onClick(todo) }
-            setOnLongClickListener {
-                val popup = android.widget.PopupMenu(context, this)
-                popup.menuInflater.inflate(R.menu.menu_list_item, popup.menu)
-                popup.setOnMenuItemClickListener {
-                    when (it.itemId) {
-                        R.id.rename_list -> {
-                            onRenameRequest(todo)
-                            true
-                        }
-                        R.id.delete_list -> {
-                            onLongClick(todo)
-                            true
-                        }
-                        else -> false
+        }
+        holder.binding.optionsButton.setOnClickListener { view ->
+            val popup = android.widget.PopupMenu(view.context, view)
+            popup.menuInflater.inflate(R.menu.menu_list_item, popup.menu)
+            popup.setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.rename_list -> {
+                        onRenameRequest(todo)
+                        true
                     }
+                    R.id.delete_list -> {
+                        onLongClick(todo)
+                        true
+                    }
+                    else -> false
                 }
-                popup.show()
-                true
             }
-
+            popup.show()
         }
     }
 

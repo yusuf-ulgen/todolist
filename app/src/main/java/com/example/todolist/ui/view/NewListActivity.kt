@@ -22,6 +22,7 @@ class NewListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityNewListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // Intent ile gelen değerleri burada alıyoruz
         val currentListId = intent.getLongExtra("listId", 1L)

@@ -14,6 +14,7 @@ class ThemeActivity : AppCompatActivity() {
 
         binding = ActivityThemeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         supportActionBar?.title = "Tema Seçimi"
     }

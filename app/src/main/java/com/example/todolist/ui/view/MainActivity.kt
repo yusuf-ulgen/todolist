@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize view binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         currentListId = intent?.getLongExtra("listId", 1L) ?: 1L
         listName = intent?.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"

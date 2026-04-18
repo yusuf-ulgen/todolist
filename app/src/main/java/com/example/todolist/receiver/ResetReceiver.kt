@@ -22,7 +22,8 @@ class ResetReceiver : BroadcastReceiver() {
         val resetTimeDao = db.resetTimeDao()
 
         CoroutineScope(Dispatchers.IO).launch {
-            val allTasks = taskDao.getAllTasks()
+            val allTasksUnfiltered = taskDao.getAllTasks()
+            val allTasks = allTasksUnfiltered.filter { it.listId == 1L }
             val completed = allTasks.count { it.isChecked }
             val total = allTasks.size
             val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())

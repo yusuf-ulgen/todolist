@@ -15,6 +15,7 @@ class ChangePasswordActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityChangePasswordBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         mAuth = FirebaseAuth.getInstance()
 
@@ -67,7 +68,10 @@ class ChangePasswordActivity : AppCompatActivity() {
                             startActivity(intent)
                             finish()
                         } else {
-                            binding.newPassword.error = "Şifre değiştirilemedi: ${updateTask.exception?.message}"
+                            val msg = updateTask.exception?.message?.lowercase() ?: ""
+                            val errMsg = if (msg.contains("weak")) "Şifreniz çok zayıf. En az 6 karakterli bir şifre kullanın."
+                                         else "İşlem başarısız oldu, lütfen bağlantınızı kontrol edip tekrar deneyin."
+                            binding.newPassword.error = errMsg
                             binding.newPassword.requestFocus()
                         }
                     }

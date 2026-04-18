@@ -25,6 +25,7 @@ class ResetTimeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityResetTimeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         val db = AppDatabase.getDatabase(applicationContext)
         val repository =

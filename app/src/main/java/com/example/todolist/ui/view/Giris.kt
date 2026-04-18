@@ -25,6 +25,7 @@ class Giris : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityGirisBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // 1) FirebaseAuth'ı başlat
         mAuth = FirebaseAuth.getInstance()
@@ -135,23 +136,25 @@ class Giris : AppCompatActivity() {
     }
 
     private fun registerUser(email: String, password: String) {
-        mAuth.createUserWithEmailAndPassword(email, password)
+        val finalEmail = if (!email.contains("@")) "$email@gmail.com" else email
+        mAuth.createUserWithEmailAndPassword(finalEmail, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     navigateToMain()
                 } else {
-                    showFieldError(binding.mailId, "Kayıt hatası: ${task.exception?.message}")
+                    showFieldError(binding.mailId, getFriendlyMessage(task.exception))
                 }
             }
     }
 
     private fun loginUser(email: String, password: String) {
-        mAuth.signInWithEmailAndPassword(email, password)
+        val finalEmail = if (!email.contains("@")) "$email@gmail.com" else email
+        mAuth.signInWithEmailAndPassword(finalEmail, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     navigateToMain()
                 } else {
-                    showFieldError(binding.mailId, "Giriş hatası: ${task.exception?.message}")
+                    showFieldError(binding.mailId, getFriendlyMessage(task.exception))
                 }
             }
     }
@@ -159,5 +162,19 @@ class Giris : AppCompatActivity() {
     private fun navigateToMain() {
         startActivity(Intent(this, ListelerimActivity::class.java))
         finish()
+    }
+
+    private fun getFriendlyMessage(exception: Exception?): String {
+        val msg = exception?.message ?: return "Bilinmeyen bir hata oluştu."
+        val lowerMsg = msg.lowercase()
+        return when {
+            lowerMsg.contains("invalid-email") || lowerMsg.contains("badly formatted") -> "Lütfen geçerli bir e-posta adresi girin."
+            lowerMsg.contains("user-not-found") || lowerMsg.contains("no user record") -> "Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı."
+            lowerMsg.contains("wrong-password") || lowerMsg.contains("invalid-credential") || lowerMsg.contains("invalid credential") -> "Hatalı şifre veya e-posta girdiniz."
+            lowerMsg.contains("email-already-in-use") || lowerMsg.contains("already in use") -> "Bu e-posta adresi zaten kullanımda."
+            lowerMsg.contains("weak-password") -> "Şifreniz çok zayıf. En az 6 karakter belirleyin."
+            lowerMsg.contains("network-request-failed") -> "İnternet bağlantınızı kontrol edin."
+            else -> "İşlem başarısız oldu, kontrol edip tekrar deneyin."
+        }
     }
 }

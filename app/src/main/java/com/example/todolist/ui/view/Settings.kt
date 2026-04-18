@@ -15,6 +15,7 @@ class Settings : AppCompatActivity() {
 
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // Tema Seçimi Butonuna Tıklama İşlemi
         binding.themeButton.setOnClickListener {

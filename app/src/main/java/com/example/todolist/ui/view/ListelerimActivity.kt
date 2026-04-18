@@ -44,6 +44,7 @@ class ListelerimActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityListelerimBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
         setSupportActionBar(binding.toolbar)
 
         val db = AppDatabase.getDatabase(applicationContext)

@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:603277030577:android:df585efd8a6c8129ec9e90",
         "android_client_info": {
-          "package_name": "com.example.todolist"
+          "package_name": "com.yusufulgen.todolist"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "603277030577-usubhsm7g6orbmkggsb1fm90o17g8pn0.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.todolist",
+            "package_name": "com.yusufulgen.todolist",
             "certificate_hash": "49ee2d2e2408d42042f61765ffa0476ed191934d"
           }
         },

@@ -18,6 +18,7 @@ class AdminFeedbackActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityAdminFeedbackBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // 1) Kimlik kontrolü
         val seenUid  = FirebaseAuth.getInstance().currentUser?.uid

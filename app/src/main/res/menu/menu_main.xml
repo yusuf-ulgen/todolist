@@ -4,19 +4,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_settings"
-        android:title="Settings"
+        android:title="Ayarlar"
         android:orderInCategory="100"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_feedback"
-        android:title="Feedback"
+        android:title="Geri bildirim"
         android:orderInCategory="101"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_logout"
-        android:title="Log out"
+        android:title="Çıkış yap"
         android:orderInCategory="102"
         app:showAsAction="never" />
 
