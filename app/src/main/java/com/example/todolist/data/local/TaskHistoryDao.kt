@@ -9,6 +9,6 @@ interface TaskHistoryDao {
     @Insert
     suspend fun insertAll(histories: List<TaskHistory>)
 
-    @Query("SELECT * FROM task_history WHERE date = :date")
-    suspend fun getByDate(date: String): List<TaskHistory>
+    @Query("SELECT * FROM task_history WHERE date = :date AND userId = :uid")
+    suspend fun getByDate(date: String, uid: String): List<TaskHistory>
 }

@@ -13,9 +13,9 @@ class TaskRepository(
     private val resetTimeDao: ResetTimeDao
 ) {
     // Tasks
-    suspend fun getAllTasks(): List<Task> = taskDao.getAllTasks()
+    suspend fun getAllTasks(uid: String): List<Task> = taskDao.getAllTasks(uid)
     
-    suspend fun getTasksByListId(listId: Long): List<Task> = taskDao.getTasksByListId(listId)
+    suspend fun getTasksByListId(uid: String, listId: Long): List<Task> = taskDao.getTasksByListId(uid, listId)
     
     suspend fun getTasksByWeekday(uid: String, day: String, listId: Long): List<Task> = 
         taskDao.getTasksByWeekday(uid, day, listId)
@@ -25,14 +25,14 @@ class TaskRepository(
     suspend fun deleteTask(task: Task) = taskDao.deleteTask(task)
     
     suspend fun updateTask(task: Task) = taskDao.updateTask(task)
-
+    
     suspend fun updateTasks(vararg tasks: Task) = taskDao.updateTasks(*tasks)
     
     suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task? = 
         taskDao.getTaskByTimeAndUserId(time, userId)
 
     // To-do Lists
-    suspend fun getAllLists(): List<Todolist> = todolistDao.getAllLists()
+    suspend fun getAllLists(uid: String): List<Todolist> = todolistDao.getAllLists(uid)
     
     suspend fun insertList(list: Todolist): Long = todolistDao.insertList(list)
     
@@ -42,20 +42,20 @@ class TaskRepository(
 
     // Daily Stats
     suspend fun upsertDailyStat(stat: DailyStat) = dailyStatDao.upsert(stat)
-    suspend fun getLast30DaysStats(): List<DailyStat> = dailyStatDao.getLast30Days()
+    suspend fun getLast30DaysStats(uid: String): List<DailyStat> = dailyStatDao.getLast30Days(uid)
 
     // Task History
     suspend fun insertHistory(history: List<TaskHistory>) = taskHistoryDao.insertAll(history)
-    suspend fun getHistoryByDate(date: String): List<TaskHistory> = taskHistoryDao.getByDate(date)
+    suspend fun getHistoryByDate(date: String, uid: String): List<TaskHistory> = taskHistoryDao.getByDate(date, uid)
 
     // Notification Preferences
-    suspend fun getNotificationPref() = notificationPrefDao.getPref()
+    suspend fun getNotificationPref(uid: String) = notificationPrefDao.getPref(uid)
     
     suspend fun upsertNotificationPref(pref: NotificationPref) = 
         notificationPrefDao.upsert(pref)
 
     // Reset Time
-    suspend fun getResetTime() = resetTimeDao.getResetTime()
+    suspend fun getResetTime(uid: String) = resetTimeDao.getResetTime(uid)
     
     suspend fun upsertResetTime(resetTime: ResetTime) = resetTimeDao.upsert(resetTime)
 }

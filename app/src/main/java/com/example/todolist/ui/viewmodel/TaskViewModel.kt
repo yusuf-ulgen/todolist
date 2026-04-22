@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.google.firebase.auth.FirebaseAuth
 
 class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
 
@@ -28,10 +29,13 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     private val _last30DaysStats = MutableLiveData<List<DailyStat>>()
     val last30DaysStats: LiveData<List<DailyStat>> = _last30DaysStats
 
+    private fun getCurrentUserId(): String? = FirebaseAuth.getInstance().currentUser?.uid
+
     fun loadResetTime() {
+        val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getResetTime()
+                repository.getResetTime(uid)
             }
             _resetTime.value = result
         }
@@ -46,18 +50,20 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun loadHistoryByDate(date: String) {
+        val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getHistoryByDate(date)
+                repository.getHistoryByDate(date, uid)
             }
             _history.value = result
         }
     }
 
     fun loadLast30DaysStats() {
+        val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getLast30DaysStats()
+                repository.getLast30DaysStats(uid)
             }
             _last30DaysStats.value = result
         }
@@ -72,9 +78,10 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun loadTasksByListId(listId: Long) {
+        val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getTasksByListId(listId)
+                repository.getTasksByListId(uid, listId)
             }
             _tasks.value = result
         }
@@ -97,7 +104,7 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             if (task.weekday.isNullOrBlank()) {
                 loadTasksByListId(task.listId)
             } else {
-                task.userId?.let { loadWeeklyTasksForDay(it, task.weekday!!, task.listId) }
+                loadWeeklyTasksForDay(task.userId, task.weekday!!, task.listId)
             }
             onCompleted?.invoke()
         }
@@ -128,15 +135,14 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.updateTasks(*tasks)
             }
-            // Tüm güncellemeler bittikten sonra sadece bir kez yükleme yapıyoruz
             val first = tasks[0]
+            val uid = first.userId
             if (first.weekday.isNullOrBlank()) {
                 val result = withContext(Dispatchers.IO) {
-                    repository.getTasksByListId(first.listId)
+                    repository.getTasksByListId(uid, first.listId)
                 }
                 _tasks.value = result
             } else {
-                val uid = first.userId
                 if (uid.isNotEmpty() && !first.weekday.isNullOrEmpty()) {
                     val result = withContext(Dispatchers.IO) {
                         repository.getTasksByWeekday(uid, first.weekday!!, first.listId)
@@ -165,11 +171,24 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun loadAllLists() {
+        val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                repository.getAllLists()
+                repository.getAllLists(uid)
             }
-            _lists.value = result
+            if (result.isEmpty()) {
+                // Varsayılan listeyi oluştur
+                withContext(Dispatchers.IO) {
+                    repository.insertList(Todolist(userId = uid, name = "GÜNLÜK/HAFTALIK"))
+                }
+                // Tekrar yükle
+                val newResult = withContext(Dispatchers.IO) {
+                    repository.getAllLists(uid)
+                }
+                _lists.value = newResult
+            } else {
+                _lists.value = result
+            }
         }
     }
 

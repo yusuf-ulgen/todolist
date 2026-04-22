@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "lists")
 data class Todolist(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    var userId: String,                // Firebase UID'si eklendi
     var name: String,
     var sortOrder: Int = 0
 )

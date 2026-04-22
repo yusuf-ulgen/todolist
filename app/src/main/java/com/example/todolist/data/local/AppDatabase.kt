@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
                         TaskHistory::class,
                         NotificationPref::class,
                         Todolist::class],
-        version = 13,
+        version = 14,
         exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -91,24 +91,6 @@ abstract class AppDatabase : RoomDatabase() {
                                                     MIGRATION_12_13
                                             )
                                             .fallbackToDestructiveMigration()
-                                            .addCallback(
-                                                    object : Callback() {
-                                                        override fun onCreate(
-                                                                db: SupportSQLiteDatabase
-                                                        ) {
-                                                            super.onCreate(db)
-                                                            CoroutineScope(Dispatchers.IO).launch {
-                                                                INSTANCE?.todolistDao()
-                                                                        ?.insert(
-                                                                                Todolist(
-                                                                                        name =
-                                                                                                "GÜNLÜK/HAFTALIK"
-                                                                                )
-                                                                        )
-                                                            }
-                                                        }
-                                                    }
-                                            )
                                             .build()
                             INSTANCE = instance
                             instance

@@ -22,16 +22,17 @@ class ResetReceiver : BroadcastReceiver() {
         val resetTimeDao = db.resetTimeDao()
 
         CoroutineScope(Dispatchers.IO).launch {
-            val allTasksUnfiltered = taskDao.getAllTasks()
-            val allTasks = allTasksUnfiltered.filter { it.listId == 1L }
+            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+            val allTasks = taskDao.getAllTasks(uid)
             val completed = allTasks.count { it.isChecked }
             val total = allTasks.size
             val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            dailyStatDao.upsert(DailyStat(todayKey, completed, total))
+            dailyStatDao.upsert(DailyStat(todayKey, uid, completed, total))
 
             // 3) History kaydet
             val history = allTasks.map { t ->
                 TaskHistory(
+                    userId = uid,
                     date = todayKey,
                     content = t.content,
                     time = t.time,
@@ -62,7 +63,7 @@ class ResetReceiver : BroadcastReceiver() {
                 }
 
             // 5) Bir sonraki reset alarmını yeniden planla
-            resetTimeDao.getResetTime()?.let { rt ->
+            resetTimeDao.getResetTime(uid)?.let { rt ->
                 scheduleNextReset(context, rt)
             }
         }

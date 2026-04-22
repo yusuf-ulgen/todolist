@@ -10,6 +10,6 @@ interface ResetTimeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(resetTime: ResetTime)
 
-    @Query("SELECT * FROM reset_time WHERE id = 0 LIMIT 1")
-    suspend fun getResetTime(): ResetTime?
+    @Query("SELECT * FROM reset_time WHERE id = 0 AND userId = :uid LIMIT 1")
+    suspend fun getResetTime(uid: String): ResetTime?
 }

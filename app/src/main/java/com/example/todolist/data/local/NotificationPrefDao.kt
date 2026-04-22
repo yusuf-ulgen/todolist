@@ -10,6 +10,6 @@ interface NotificationPrefDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(pref: NotificationPref)
 
-    @Query("SELECT * FROM notification_pref LIMIT 1")
-    suspend fun getPref(): NotificationPref?
+    @Query("SELECT * FROM notification_pref WHERE userId = :uid LIMIT 1")
+    suspend fun getPref(uid: String): NotificationPref?
 }

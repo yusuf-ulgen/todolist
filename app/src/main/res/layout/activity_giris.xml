@@ -48,7 +48,6 @@
                 android:textColorHint="?attr/colorOnBackground"/>
         </LinearLayout>
 
-        <!-- Şifre Satırı -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -64,17 +63,26 @@
                 android:textSize="16sp"
                 android:textColor="?attr/colorOnBackground"/>
 
-            <EditText
-                android:id="@+id/sifre_id"
+            <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:hint="Şifrenizi giriniz"
-                android:inputType="textPassword"
-                android:backgroundTint="?attr/colorPrimaryVariant"
-                android:textColor="?attr/colorOnBackground"
-                android:textColorHint="?attr/colorOnBackground"/>
+                app:passwordToggleEnabled="true"
+                app:passwordToggleTint="?attr/colorOnBackground"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/sifre_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Şifrenizi giriniz"
+                    android:inputType="textPassword"
+                    android:background="@null"
+                    android:textColor="?attr/colorOnBackground"
+                    android:textColorHint="?attr/colorOnBackground"
+                    android:padding="0dp"/>
+            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
         <!-- Giriş ve Kaydol Butonları -->

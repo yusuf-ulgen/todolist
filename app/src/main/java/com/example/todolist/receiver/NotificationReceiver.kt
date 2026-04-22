@@ -27,9 +27,10 @@ class NotificationReceiver : BroadcastReceiver() {
                 val listId      = intent.getLongExtra("listId", 1L)
                 val isPinned    = intent.getBooleanExtra("isPinned", false)
 
+                val userId      = intent.getStringExtra("userId") ?: ""
                 // 1) Bildirim Tercihini Oku
                 val db = AppDatabase.getDatabase(context)
-                val pref = db.notificationPrefDao().getPref()
+                val pref = if (userId.isNotBlank()) db.notificationPrefDao().getPref(userId) else null
                 val kind = pref?.kind ?: 0 // Default: Herkes (0)
 
                 // 2) Filtrele

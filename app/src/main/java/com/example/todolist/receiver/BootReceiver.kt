@@ -20,7 +20,7 @@ class BootReceiver : BroadcastReceiver() {
             val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
             CoroutineScope(Dispatchers.IO).launch {
-                val allTasks = taskDao.getAllTasks()
+                val allTasks = taskDao.getAllTasksUnfiltered()
                 allTasks.forEach { task ->
                     if (task.time.isNotBlank() && task.time != "Saat") {
                         scheduleTaskNotification(context, am, task)
@@ -56,6 +56,7 @@ class BootReceiver : BroadcastReceiver() {
             putExtra("taskContent", task.content)
             putExtra("listId", task.listId)
             putExtra("isPinned", task.isPinned)
+            putExtra("userId", task.userId)
         }
 
         val pi = PendingIntent.getBroadcast(

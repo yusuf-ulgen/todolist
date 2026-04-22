@@ -32,12 +32,8 @@ class ListelerimActivity : AppCompatActivity() {
     private lateinit var adapter: ListelerimAdapter
     private lateinit var viewModel: TaskViewModel
     private val lists = mutableListOf<Todolist>()
+    private var userDefaultList: Todolist? = null
     private var isMoving = false
-
-    companion object {
-        const val DEFAULT_LIST_ID = 1L
-        private const val DEFAULT_LIST_NAME = "GÜNLÜK/HAFTALIK"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
@@ -70,10 +66,10 @@ class ListelerimActivity : AppCompatActivity() {
                 }
             },
             onLongClick = { todo ->
-                if (todo.id != DEFAULT_LIST_ID) confirmAndDelete(todo)
+                if (todo.name != "GÜNLÜK/HAFTALIK") confirmAndDelete(todo)
             },
             onRenameRequest = { todo ->
-                if (todo.id != DEFAULT_LIST_ID) showRenameDialog(todo)
+                if (todo.name != "GÜNLÜK/HAFTALIK") showRenameDialog(todo)
             }
         )
         binding.recyclerView.apply {
@@ -83,10 +79,15 @@ class ListelerimActivity : AppCompatActivity() {
 
         // Default liste butonu
         binding.buttonTodolist.setOnClickListener {
-            Intent(this, MainActivity::class.java).also {
-                it.putExtra("listId", DEFAULT_LIST_ID)
-                it.putExtra("listName", DEFAULT_LIST_NAME)
-                startActivity(it)
+            userDefaultList?.let { defaultList ->
+                Intent(this, MainActivity::class.java).also {
+                    it.putExtra("listId", defaultList.id)
+                    it.putExtra("listName", defaultList.name)
+                    startActivity(it)
+                }
+            } ?: run {
+                // Eğer liste henüz yüklenmemişse tekrar yükle
+                viewModel.loadAllLists()
             }
         }
 
@@ -101,8 +102,8 @@ class ListelerimActivity : AppCompatActivity() {
             ): Boolean {
                 val from = vh.adapterPosition
                 val to = target.adapterPosition
-                // Default listeyi taşıma
-                if (lists[from].id == DEFAULT_LIST_ID || lists[to].id == DEFAULT_LIST_ID) {
+                // Default listeyi taşıma (İsim kontrolü ile)
+                if (lists[from].name == "GÜNLÜK/HAFTALIK" || lists[to].name == "GÜNLÜK/HAFTALIK") {
                     return false
                 }
                 
@@ -115,11 +116,9 @@ class ListelerimActivity : AppCompatActivity() {
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
                 
-                // 1) Listeyi al ve kopyala (Deep Copy)
                 val rawList = lists.toList()
                 val updated = rawList.map { it.copy() }
                 
-                // 2) Animasyon kilidi
                 val originalAnimator = recyclerView.itemAnimator
                 recyclerView.itemAnimator = null
                 
@@ -127,9 +126,6 @@ class ListelerimActivity : AppCompatActivity() {
                     todoList.sortOrder = idx
                 }
                 
-                // 3) Senkron UI Güncelleme (Gecikmesiz)
-                // ListelerimAdapter basit bir RecyclerView.Adapter, notifyDataSetChanged yeterli
-                // Ancak elimizdeki 'lists' bir MutableList. Onu güncelleyip notify ediyoruz.
                 lists.clear()
                 lists.addAll(updated)
                 adapter.notifyDataSetChanged()
@@ -151,8 +147,13 @@ class ListelerimActivity : AppCompatActivity() {
         // Observe lists
         viewModel.lists.observe(this) { updatedLists ->
             if (isMoving) return@observe
+            
+            // Varsayılan listeyi ayır
+            userDefaultList = updatedLists.find { it.name == "GÜNLÜK/HAFTALIK" }
+            
             lists.clear()
-            lists.addAll(updatedLists.filter { it.id != DEFAULT_LIST_ID })
+            // Varsayılan liste hariç diğerlerini ekle
+            lists.addAll(updatedLists.filter { it.name != "GÜNLÜK/HAFTALIK" })
             adapter.notifyDataSetChanged()
         }
     }

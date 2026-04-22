@@ -8,8 +8,8 @@ import androidx.room.Update
 
 @Dao
 interface TodolistDao {
-    @Query("SELECT * FROM lists ORDER BY sortOrder ASC")
-    suspend fun getAllLists(): List<Todolist>
+    @Query("SELECT * FROM lists WHERE userId = :uid ORDER BY sortOrder ASC")
+    suspend fun getAllLists(uid: String): List<Todolist>
 
     @Insert
     suspend fun insertList(list: Todolist): Long

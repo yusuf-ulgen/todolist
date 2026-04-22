@@ -175,7 +175,8 @@ class MainActivity : AppCompatActivity() {
                         onTimeClick = { task, b ->
                             // ... (existing logic for notification choice)
                             lifecycleScope.launch(Dispatchers.IO) {
-                                val kind = notifPrefRepo.loadKind()
+                                val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                val kind = notifPrefRepo.loadKind(uid)
                                 withContext(Dispatchers.Main) {
                                     fun proceed() {
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -194,7 +195,7 @@ class MainActivity : AppCompatActivity() {
                                     if (kind < 0) {
                                         showNotificationChoice { selectedKind ->
                                             lifecycleScope.launch(Dispatchers.IO) {
-                                                notifPrefRepo.saveKind(selectedKind)
+                                                notifPrefRepo.saveKind(selectedKind, uid)
                                             }
                                             proceed()
                                         }
@@ -809,7 +810,8 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             // Mevcut günlük görevler
-            val existing: List<Task> = taskDao.getTasksByListId(listId)
+            val uid = currentUser?.uid ?: ""
+            val existing: List<Task> = taskDao.getTasksByListId(uid, listId)
             // En sona at
             task.sortOrder = existing.size
             task.weekday = "" // günlük olduğundan weekday boş
@@ -896,7 +898,7 @@ class MainActivity : AppCompatActivity() {
     private fun persistCurrentStats() {
         lifecycleScope.launch(Dispatchers.IO) {
             val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
-            val allTasks = taskDao.getAllTasks().filter { it.userId == currentUid }
+            val allTasks = taskDao.getAllTasks(currentUid)
 
             val todayDowName = LocalDate.now().dayOfWeek.name
             val dailyTasks = allTasks.filter { it.weekday.isNullOrBlank() }
@@ -909,7 +911,7 @@ class MainActivity : AppCompatActivity() {
             val todayKey =
                     SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             .format(Calendar.getInstance().time)
-            viewModel.upsertDailyStat(DailyStat(todayKey, completedCount, totalCount))
+            viewModel.upsertDailyStat(DailyStat(todayKey, currentUid, completedCount, totalCount))
         }
     }
 
@@ -1042,7 +1044,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("NewApi")
     private fun checkAndPerformReset() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val resetTime = resetTimeDao.getResetTime() ?: return@launch
+            val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+            val resetTime = resetTimeDao.getResetTime(currentUid) ?: return@launch
 
             val now = Calendar.getInstance()
             val prefs = getSharedPreferences("settings", MODE_PRIVATE)
@@ -1066,8 +1069,7 @@ class MainActivity : AppCompatActivity() {
 
             // 1) Tüm görevleri çek (Hangi listede olursa olsun kullanıcının tüm görevlerini
             // sayalım)
-            val currentUid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-            val allTasks = taskDao.getAllTasks().filter { it.userId == currentUid }
+            val allTasks = taskDao.getAllTasks(currentUid)
 
             // 2) İstatistik hesaplama: Günlük Görevler + Bugünün Haftalık Görevleri
             val todayDowName = LocalDate.now().dayOfWeek.name
@@ -1080,13 +1082,14 @@ class MainActivity : AppCompatActivity() {
             val totalCount = combinedTasks.size
 
             // İstatistiği kaydet
-            db.dailyStatDao().upsert(DailyStat(todayKey, completedCount, totalCount))
+            db.dailyStatDao().upsert(DailyStat(todayKey, currentUid, completedCount, totalCount))
 
             // 3) Geçmişe kaydet (Sadece günlük olanlar mı? Kullanıcı "o günün istatistiklerini"
             // dediği için kombineyi de kaydedebiliriz ama şimdilik mevcut yapıyı koruyalım)
             val history =
                     combinedTasks.map {
                         TaskHistory(
+                                userId = currentUid,
                                 date = todayKey,
                                 content = it.content,
                                 time = it.time,
@@ -1197,6 +1200,7 @@ class MainActivity : AppCompatActivity() {
                     putExtra("taskContent", task.content)
                     putExtra("listId", task.listId)
                     putExtra("isPinned", task.isPinned)
+                    putExtra("userId", task.userId)
                 }
 
         val pi =

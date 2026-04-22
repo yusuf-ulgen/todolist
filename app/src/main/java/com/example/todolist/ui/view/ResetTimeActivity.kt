@@ -59,9 +59,10 @@ class ResetTimeActivity : AppCompatActivity() {
             val minute = binding.timePicker.minute
             val dayPos = binding.weekDaySpinner.selectedItemPosition
 
+            val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: ""
             // 1) Room’a upsert et
             viewModel.saveResetTime(
-                    ResetTime(id = 0, resetHour = hour, resetMinute = minute, resetDay = dayPos)
+                    ResetTime(id = 0, userId = uid, resetHour = hour, resetMinute = minute, resetDay = dayPos)
             )
 
             // 2) Haftalık alarmı planla

@@ -10,6 +10,7 @@ import com.example.todolist.databinding.ActivityNewListBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.google.firebase.auth.FirebaseAuth
 
 @Suppress("NAME_SHADOWING")
 class NewListActivity : AppCompatActivity() {
@@ -64,7 +65,8 @@ class NewListActivity : AppCompatActivity() {
 
     private fun saveList(listName: String) {
         // Yeni bir liste oluştur
-        val newList = Todolist(name = listName) // Burada boş bir liste oluşturuyoruz
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        val newList = Todolist(userId = uid, name = listName) // Burada boş bir liste oluşturuyoruz
 
         lifecycleScope.launch(Dispatchers.IO) {
             // Listeyi veritabanına ekle

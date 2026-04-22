@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:603277030577:android:df585efd8a6c8129ec9e90",
         "android_client_info": {
-          "package_name": "com.yusufulgen.todolist"
+          "package_name": "com.example.todolist"
         }
       },
       "oauth_client": [
@@ -17,10 +17,39 @@
           "client_id": "603277030577-usubhsm7g6orbmkggsb1fm90o17g8pn0.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.yusufulgen.todolist",
+            "package_name": "com.example.todolist",
             "certificate_hash": "49ee2d2e2408d42042f61765ffa0476ed191934d"
           }
         },
+        {
+          "client_id": "603277030577-kpcse2itj5e98k9ouldermdfka23bvbl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCswmQ-GYbfzRIMEXYCQI1seg0ZI0004m0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "603277030577-kpcse2itj5e98k9ouldermdfka23bvbl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:603277030577:android:d6566a6e4f6ce026ec9e90",
+        "android_client_info": {
+          "package_name": "com.yusufulgen.todolist"
+        }
+      },
+      "oauth_client": [
         {
           "client_id": "603277030577-kpcse2itj5e98k9ouldermdfka23bvbl.apps.googleusercontent.com",
           "client_type": 3

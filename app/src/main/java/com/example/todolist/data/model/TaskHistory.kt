@@ -9,6 +9,7 @@ data class TaskHistory(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
+    @ColumnInfo(name = "userId") val userId: String,
     @ColumnInfo val date: String,
     @ColumnInfo val content: String,
     @ColumnInfo val time: String,
