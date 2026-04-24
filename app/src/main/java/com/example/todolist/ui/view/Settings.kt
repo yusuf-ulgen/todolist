@@ -43,15 +43,18 @@ class Settings : AppCompatActivity() {
 
         // Admin Feedback Tıklama İşlemi
         binding.feedbackListButton.setOnClickListener {
-            val seenUid  = FirebaseAuth.getInstance().currentUser?.uid
+            val user = FirebaseAuth.getInstance().currentUser
+            val seenUid = user?.uid
+            val seenEmail = user?.email
             val adminUid = "NvKPJHa85rfVgFId0r46FcKGq5u1"
+            val testAdminEmail = "testadmin@gmail.com"
 
-            if (seenUid != adminUid) {
-                // Sadece bu mesaj görünsün:
-                Toast.makeText(this, "Yetkiniz yok.", Toast.LENGTH_SHORT).show()
-            } else {
-                // Admin ise ekrana geçiş:
+            if (seenUid == adminUid || seenEmail == testAdminEmail) {
+                // Admin veya Test Hesabı ise ekrana geçiş:
                 startActivity(Intent(this, AdminFeedbackActivity::class.java))
+            } else {
+                // Yetki yoksa:
+                Toast.makeText(this, "Yetkiniz yok.", Toast.LENGTH_SHORT).show()
             }
         }
     }

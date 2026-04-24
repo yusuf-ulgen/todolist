@@ -21,10 +21,13 @@ class AdminFeedbackActivity : AppCompatActivity() {
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // 1) Kimlik kontrolü
-        val seenUid  = FirebaseAuth.getInstance().currentUser?.uid
+        val user = FirebaseAuth.getInstance().currentUser
+        val seenUid = user?.uid
+        val seenEmail = user?.email
         val adminUid = "NvKPJHa85rfVgFId0r46FcKGq5u1"
+        val testAdminEmail = "testadmin@gmail.com"
 
-        if (seenUid != adminUid) {
+        if (seenUid != adminUid && seenEmail != testAdminEmail) {
             Toast.makeText(this, "Yetkiniz yok.", Toast.LENGTH_SHORT).show()
             finish()
             return
