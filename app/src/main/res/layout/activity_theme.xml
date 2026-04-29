@@ -1,38 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ThemeActivity">
 
-    <!-- Ekranın yarısı beyaz, yarısı siyah olacak -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Sol (Beyaz) taraf -->
+    <View
+        android:id="@+id/white_side"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:background="#FFFFFF"
+        android:clickable="true"
+        android:focusable="true"
+        android:onClick="onWhiteClick"
+        app:layout_constraintEnd_toStartOf="@+id/black_side"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Beyaz kısmı -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="#FFFFFF"
-            android:gravity="center"
-            android:clickable="true"
-            android:onClick="onWhiteClick">
-        </LinearLayout>
+    <!-- Sağ (Siyah) taraf -->
+    <View
+        android:id="@+id/black_side"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="#121212"
+        android:clickable="true"
+        android:focusable="true"
+        android:onClick="onBlackClick"
+        app:layout_constraintStart_toEndOf="@+id/white_side"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Siyah kısmı -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="#000000"
-            android:gravity="center"
-            android:clickable="true"
-            android:onClick="onBlackClick">
-        </LinearLayout>
+    <!-- Beyaz Tema Yazısı -->
+    <TextView
+        android:id="@+id/tv_white_theme"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Beyaz Tema"
+        android:textColor="#000000"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:elevation="8dp"
+        android:layout_marginBottom="80dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/white_side"
+        app:layout_constraintEnd_toEndOf="@+id/white_side" />
 
-    </LinearLayout>
+    <!-- Siyah Tema Yazısı -->
+    <TextView
+        android:id="@+id/tv_black_theme"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Siyah Tema"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        android:elevation="8dp"
+        android:layout_marginBottom="80dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/black_side"
+        app:layout_constraintEnd_toEndOf="@+id/black_side" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

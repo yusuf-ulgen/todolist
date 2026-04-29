@@ -51,6 +51,7 @@ class TaskAdapter(
 
     @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: TaskViewHolder, position: Int) {
+        holder.itemView.translationX = 0f
         val task = getItem(position)
         val b = holder.binding
         val ctx = holder.itemView.context

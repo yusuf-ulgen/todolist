@@ -13,6 +13,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -344,6 +348,10 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         super.clearView(recyclerView, viewHolder)
                         
+                        // Sadece sürükleme (drag) işlemi sonrasında listeyi güncelle.
+                        // Kaydırma (swipe) işlemi ise bunu atlar, böylece yeşil/kırmızı arka plan takılı kalmaz.
+                        if (!isMoving) return
+                        
                         // 1) Listeyi al ve kopyala (Deep Copy)
                         val rawList = adapter.getTasks()
                         val updatedList = rawList.map { it.copy() }
@@ -378,34 +386,108 @@ class MainActivity : AppCompatActivity() {
                         if (pos == RecyclerView.NO_POSITION || pos >= adapter.currentList.size)
                                 return
 
-                        val deletedTask = adapter.currentList[pos]
+                        val task = adapter.currentList[pos]
 
-                        // 1) DB'den sil
-                        viewModel.deleteTask(deletedTask)
+                        if (direction == ItemTouchHelper.LEFT) {
+                            // 1) DB'den sil
+                            viewModel.deleteTask(task)
+                            
+                            // 2) Yerel listeyi güncelle ve UI'ı tazele
+                            dailyTasksList = dailyTasksList.filter { it.id != task.id }
+                            filterAndDisplayTasks()
+
+                            val typedValue = android.util.TypedValue()
+                            theme.resolveAttribute(R.attr.snackbarActionColor, typedValue, true)
+                            val actionColor = typedValue.data
+
+                            Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
+                                    .setAction("Geri Al") {
+                                        viewModel.addTask(task)
+                                        val newList = dailyTasksList.toMutableList()
+                                        newList.add(pos.coerceAtMost(newList.size), task)
+                                        dailyTasksList = newList
+                                        filterAndDisplayTasks()
+                                    }
+                                    .setActionTextColor(actionColor)
+                                    .show()
+                        } else {
+                            // PIN / UNPIN
+                            task.isPinned = !task.isPinned
+                            
+                            // Yerel listeyi anlık güncelle (senkronizasyon için)
+                            dailyTasksList = dailyTasksList.map { 
+                                if (it.id == task.id) it.copy(isPinned = task.isPinned) else it 
+                            }
+                            
+                            viewModel.updateTask(task)
+                            
+                            // 100ms boyunca kullanıcının yeşil alanı (başarı hissini) görmesini sağla
+                            // Ardından listeyi tamamen sıfırlayarak yeşil arka planın takılı kalmasını KESİN olarak engelle.
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                filterAndDisplayTasks()
+                                adapter.notifyDataSetChanged() // ItemTouchHelper kalıntılarını yok eder
+                            }, 100)
+                        }
                         
-                        // 2) Yerel listeyi güncelle ve UI'ı tazele
-                        dailyTasksList = dailyTasksList.filter { it.id != deletedTask.id }
-                        filterAndDisplayTasks()
-
-                        val typedValue = android.util.TypedValue()
-                        theme.resolveAttribute(R.attr.snackbarActionColor, typedValue, true)
-                        val actionColor = typedValue.data
-
-                        Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
-                                .setAction("Geri Al") {
-                                    // 1) DB'ye geri ekle
-                                    viewModel.addTask(deletedTask)
-                                    // 2) Yerel listeye geri ekle
-                                    val newList = dailyTasksList.toMutableList()
-                                    newList.add(pos.coerceAtMost(newList.size), deletedTask)
-                                    dailyTasksList = newList
-                                    filterAndDisplayTasks()
-                                }
-                                .setActionTextColor(actionColor)
-                                .show()
-                        
-                        // Pozisyonları ve numaraları güncellemek için zorla tetikle
                         adapter.notifyItemRangeChanged(pos, adapter.itemCount - pos)
+                    }
+
+                    override fun onChildDraw(
+                        c: Canvas,
+                        recyclerView: RecyclerView,
+                        viewHolder: RecyclerView.ViewHolder,
+                        dX: Float,
+                        dY: Float,
+                        actionState: Int,
+                        isCurrentlyActive: Boolean
+                    ) {
+                        val itemView = viewHolder.itemView
+                        val itemHeight = itemView.bottom - itemView.top
+                        val paint = Paint()
+
+                        if (dX > 0) { // Swiping Right (PIN)
+                            paint.color = Color.parseColor("#43A047")
+                            val background = RectF(
+                                itemView.left.toFloat(),
+                                itemView.top.toFloat(),
+                                itemView.left.toFloat() + dX,
+                                itemView.bottom.toFloat()
+                            )
+                            c.drawRect(background, paint)
+
+                            val icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_pin)
+                            icon?.let {
+                                val iconMargin = (itemHeight - it.intrinsicHeight) / 2
+                                val iconTop = itemView.top + (itemHeight - it.intrinsicHeight) / 2
+                                val iconBottom = iconTop + it.intrinsicHeight
+                                val iconLeft = itemView.left + iconMargin
+                                val iconRight = itemView.left + iconMargin + it.intrinsicWidth
+                                it.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                                it.draw(c)
+                            }
+                        } else if (dX < 0) { // Swiping Left (DELETE)
+                            paint.color = Color.parseColor("#E53935")
+                            val background = RectF(
+                                itemView.right.toFloat() + dX,
+                                itemView.top.toFloat(),
+                                itemView.right.toFloat(),
+                                itemView.bottom.toFloat()
+                            )
+                            c.drawRect(background, paint)
+
+                            val icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_delete)
+                            icon?.let {
+                                val iconMargin = (itemHeight - it.intrinsicHeight) / 2
+                                val iconTop = itemView.top + (itemHeight - it.intrinsicHeight) / 2
+                                val iconBottom = iconTop + it.intrinsicHeight
+                                val iconRight = itemView.right - iconMargin
+                                val iconLeft = itemView.right - iconMargin - it.intrinsicWidth
+                                it.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                                it.draw(c)
+                            }
+                        }
+
+                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
                     }
 
                     override fun isLongPressDragEnabled() = true
@@ -447,6 +529,8 @@ class MainActivity : AppCompatActivity() {
                     override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
                         super.clearView(rv, vh)
                         
+                        if (!isMoving) return
+                        
                         val rawList = weeklyAdapter.getTasks()
                         val updatedList = rawList.map { it.copy() }
                         
@@ -475,34 +559,108 @@ class MainActivity : AppCompatActivity() {
                         if (pos == RecyclerView.NO_POSITION || pos >= weeklyAdapter.currentList.size)
                                 return
 
-                        val deletedTask = weeklyAdapter.currentList[pos]
+                        val task = weeklyAdapter.currentList[pos]
 
-                        // 1) DB'den sil
-                        viewModel.deleteTask(deletedTask)
+                        if (direction == ItemTouchHelper.LEFT) {
+                            // 1) DB'den sil
+                            viewModel.deleteTask(task)
+                            
+                            // 2) Yerel listeyi güncelle ve UI'ı tazele
+                            weeklyTasksList = weeklyTasksList.filter { it.id != task.id }
+                            filterAndDisplayTasks()
+
+                            val typedValue = android.util.TypedValue()
+                            theme.resolveAttribute(R.attr.snackbarActionColor, typedValue, true)
+                            val actionColor = typedValue.data
+
+                            Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
+                                    .setAction("Geri Al") {
+                                        viewModel.addTask(task)
+                                        val newList = weeklyTasksList.toMutableList()
+                                        newList.add(pos.coerceAtMost(newList.size), task)
+                                        weeklyTasksList = newList
+                                        filterAndDisplayTasks()
+                                    }
+                                    .setActionTextColor(actionColor)
+                                    .show()
+                        } else {
+                            // PIN / UNPIN
+                            task.isPinned = !task.isPinned
+                            
+                            // Yerel listeyi anlık güncelle (senkronizasyon için)
+                            weeklyTasksList = weeklyTasksList.map { 
+                                if (it.id == task.id) it.copy(isPinned = task.isPinned) else it 
+                            }
+                            
+                            viewModel.updateTask(task)
+                            
+                            // 100ms boyunca kullanıcının yeşil alanı (başarı hissini) görmesini sağla
+                            // Ardından listeyi tamamen sıfırlayarak yeşil arka planın takılı kalmasını KESİN olarak engelle.
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                filterAndDisplayTasks()
+                                weeklyAdapter.notifyDataSetChanged() // ItemTouchHelper kalıntılarını yok eder
+                            }, 100)
+                        }
                         
-                        // 2) Yerel listeyi güncelle ve UI'ı tazele
-                        weeklyTasksList = weeklyTasksList.filter { it.id != deletedTask.id }
-                        filterAndDisplayTasks()
-
-                        val typedValue = android.util.TypedValue()
-                        theme.resolveAttribute(R.attr.snackbarActionColor, typedValue, true)
-                        val actionColor = typedValue.data
-
-                        Snackbar.make(binding.root, "Görev silindi", Snackbar.LENGTH_LONG)
-                                .setAction("Geri Al") {
-                                    // 1) DB'ye geri ekle
-                                    viewModel.addTask(deletedTask)
-                                    // 2) Yerel listeye geri ekle
-                                    val newList = weeklyTasksList.toMutableList()
-                                    newList.add(pos.coerceAtMost(newList.size), deletedTask)
-                                    weeklyTasksList = newList
-                                    filterAndDisplayTasks()
-                                }
-                                .setActionTextColor(actionColor)
-                                .show()
-                        
-                        // Pozisyonları ve numaraları güncellemek için zorla tetikle
                         weeklyAdapter.notifyItemRangeChanged(pos, weeklyAdapter.itemCount - pos)
+                    }
+
+                    override fun onChildDraw(
+                        c: Canvas,
+                        recyclerView: RecyclerView,
+                        viewHolder: RecyclerView.ViewHolder,
+                        dX: Float,
+                        dY: Float,
+                        actionState: Int,
+                        isCurrentlyActive: Boolean
+                    ) {
+                        val itemView = viewHolder.itemView
+                        val itemHeight = itemView.bottom - itemView.top
+                        val paint = Paint()
+
+                        if (dX > 0) { // Swiping Right (PIN)
+                            paint.color = Color.parseColor("#43A047")
+                            val background = RectF(
+                                itemView.left.toFloat(),
+                                itemView.top.toFloat(),
+                                itemView.left.toFloat() + dX,
+                                itemView.bottom.toFloat()
+                            )
+                            c.drawRect(background, paint)
+
+                            val icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_pin)
+                            icon?.let {
+                                val iconMargin = (itemHeight - it.intrinsicHeight) / 2
+                                val iconTop = itemView.top + (itemHeight - it.intrinsicHeight) / 2
+                                val iconBottom = iconTop + it.intrinsicHeight
+                                val iconLeft = itemView.left + iconMargin
+                                val iconRight = itemView.left + iconMargin + it.intrinsicWidth
+                                it.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                                it.draw(c)
+                            }
+                        } else if (dX < 0) { // Swiping Left (DELETE)
+                            paint.color = Color.parseColor("#E53935")
+                            val background = RectF(
+                                itemView.right.toFloat() + dX,
+                                itemView.top.toFloat(),
+                                itemView.right.toFloat(),
+                                itemView.bottom.toFloat()
+                            )
+                            c.drawRect(background, paint)
+
+                            val icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_delete)
+                            icon?.let {
+                                val iconMargin = (itemHeight - it.intrinsicHeight) / 2
+                                val iconTop = itemView.top + (itemHeight - it.intrinsicHeight) / 2
+                                val iconBottom = iconTop + it.intrinsicHeight
+                                val iconRight = itemView.right - iconMargin
+                                val iconLeft = itemView.right - iconMargin - it.intrinsicWidth
+                                it.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                                it.draw(c)
+                            }
+                        }
+
+                        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
                     }
 
                     override fun isLongPressDragEnabled() = true
@@ -775,6 +933,7 @@ class MainActivity : AppCompatActivity() {
                     shouldScrollToBottomWeekly = false
                 }
                 updateWeeklyStats(done, total)
+                weeklyAdapter.notifyItemRangeChanged(0, weeklyAdapter.itemCount, "UPDATE_RANK")
             }
         } else {
             val filtered =
@@ -797,6 +956,7 @@ class MainActivity : AppCompatActivity() {
                     shouldScrollToBottomDaily = false
                 }
                 updateTaskStats(done, total)
+                adapter.notifyItemRangeChanged(0, adapter.itemCount, "UPDATE_RANK")
             }
         }
     }

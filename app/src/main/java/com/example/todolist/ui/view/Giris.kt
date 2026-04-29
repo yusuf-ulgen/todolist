@@ -200,11 +200,11 @@ class Giris : AppCompatActivity() {
         return when {
             lowerMsg.contains("invalid-email") || lowerMsg.contains("badly formatted") -> "Lütfen geçerli bir e-posta adresi girin."
             lowerMsg.contains("user-not-found") || lowerMsg.contains("no user record") || lowerMsg.contains("user_not_found") -> "Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı."
-            lowerMsg.contains("wrong-password") || lowerMsg.contains("invalid-credential") || lowerMsg.contains("invalid credential") || lowerMsg.contains("invalid_credential") -> "Hatalı şifre veya e-posta girdiniz."
+            lowerMsg.contains("wrong-password") || lowerMsg.contains("invalid-credential") || lowerMsg.contains("invalid credential") || lowerMsg.contains("invalid_credential") || lowerMsg.contains("invalid_login_credentials") -> "Hatalı şifre veya e-posta girdiniz."
             lowerMsg.contains("email-already-in-use") || lowerMsg.contains("already in use") -> "Bu e-posta adresi zaten kullanımda."
             lowerMsg.contains("weak-password") -> "Şifreniz çok zayıf. En az 6 karakter belirleyin."
             lowerMsg.contains("network-request-failed") -> "İnternet bağlantınızı kontrol edin."
-            else -> "İşlem başarısız oldu: ${exception.localizedMessage ?: "Lütfen bilgilerinizi kontrol edip tekrar deneyiniz."}"
+            else -> "Lütfen bilgilerinizi kontrol edip tekrar deneyiniz."
         }
     }
 
