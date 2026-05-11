@@ -26,7 +26,7 @@ class NewListActivity : AppCompatActivity() {
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
         // Intent ile gelen değerleri burada alıyoruz
-        val currentListId = intent.getLongExtra("listId", 1L)
+        val currentListId = intent.getStringExtra("listId") ?: "default"
         val listName      = intent.getStringExtra("listName") ?: "Yeni Liste"
 
         setSupportActionBar(binding.toolbar)

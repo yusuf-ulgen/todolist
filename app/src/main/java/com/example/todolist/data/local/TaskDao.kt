@@ -27,8 +27,8 @@ interface TaskDao {
 
 
     @Query("SELECT * FROM tasks WHERE userId = :uid AND weekday = :day AND listId = :listId ORDER BY isPinned DESC, sortOrder ASC")
-    suspend fun getTasksByWeekday(uid: String, day: String, listId: Long): List<Task>
+    suspend fun getTasksByWeekday(uid: String, day: String, listId: String): List<Task>
 
     @Query("SELECT * FROM tasks WHERE userId = :uid AND listId = :listId AND (weekday IS NULL OR weekday = '') ORDER BY isPinned DESC, sortOrder ASC")
-    suspend fun getTasksByListId(uid: String, listId: Long): List<Task>
+    suspend fun getTasksByListId(uid: String, listId: String): List<Task>
 }

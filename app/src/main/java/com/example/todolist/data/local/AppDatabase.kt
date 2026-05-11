@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
                         TaskHistory::class,
                         NotificationPref::class,
                         Todolist::class],
-        version = 14,
+        version = 15,
         exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -76,6 +76,24 @@ abstract class AppDatabase : RoomDatabase() {
                     }
                 }
 
+        // Migration from 13 to 14: assumed existing
+        // Migration from 14 to 15: change Long IDs to String IDs
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Migrate tasks table
+                db.execSQL("CREATE TABLE tasks_new (id TEXT NOT NULL, userId TEXT NOT NULL, content TEXT NOT NULL, time TEXT NOT NULL, isChecked INTEGER NOT NULL, isPinned INTEGER NOT NULL, sortOrder INTEGER NOT NULL, weekday TEXT, listId TEXT NOT NULL DEFAULT 'default', priority INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(id))")
+                db.execSQL("INSERT INTO tasks_new (id, userId, content, time, isChecked, isPinned, sortOrder, weekday, listId, priority) SELECT CAST(id AS TEXT), userId, content, time, isChecked, isPinned, sortOrder, weekday, CAST(listId AS TEXT), priority FROM tasks")
+                db.execSQL("DROP TABLE tasks")
+                db.execSQL("ALTER TABLE tasks_new RENAME TO tasks")
+
+                // Migrate lists table
+                db.execSQL("CREATE TABLE lists_new (id TEXT NOT NULL, userId TEXT NOT NULL, name TEXT NOT NULL, sortOrder INTEGER NOT NULL, PRIMARY KEY(id))")
+                db.execSQL("INSERT INTO lists_new (id, userId, name, sortOrder) SELECT CAST(id AS TEXT), userId, name, sortOrder FROM lists")
+                db.execSQL("DROP TABLE lists")
+                db.execSQL("ALTER TABLE lists_new RENAME TO lists")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase =
                 INSTANCE
                         ?: synchronized(this) {
@@ -84,11 +102,12 @@ abstract class AppDatabase : RoomDatabase() {
                                                     context.applicationContext,
                                                     AppDatabase::class.java,
                                                     "task_database"
-                                            )
+                                             )
                                             .addMigrations(
                                                     MIGRATION_10_11,
                                                     MIGRATION_11_12,
-                                                    MIGRATION_12_13
+                                                    MIGRATION_12_13,
+                                                    MIGRATION_14_15
                                             )
                                             .fallbackToDestructiveMigration()
                                             .build()

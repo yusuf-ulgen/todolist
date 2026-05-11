@@ -12,7 +12,7 @@ interface TodolistDao {
     suspend fun getAllLists(uid: String): List<Todolist>
 
     @Insert
-    suspend fun insertList(list: Todolist): Long
+    suspend fun insertList(list: Todolist)
 
     @Insert
     suspend fun insert(todolist: Todolist)

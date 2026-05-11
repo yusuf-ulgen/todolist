@@ -24,7 +24,7 @@ class NotificationReceiver : BroadcastReceiver() {
             try {
                 val taskId      = intent.getIntExtra("taskId", 0)
                 val taskContent = intent.getStringExtra("taskContent") ?: "Görev zamanı!"
-                val listId      = intent.getLongExtra("listId", 1L)
+                val listId      = intent.getStringExtra("listId") ?: "default"
                 val isPinned    = intent.getBooleanExtra("isPinned", false)
 
                 val userId      = intent.getStringExtra("userId") ?: ""

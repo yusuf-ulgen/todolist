@@ -77,7 +77,29 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun loadTasksByListId(listId: Long) {
+    fun startSync() {
+        val uid = getCurrentUserId() ?: return
+        repository.startRealtimeSync(uid) {
+            // Firestore'dan gelen güncellemeler Room'a yazıldıktan sonra UI'yı tetikle
+            // Not: snapshot listener Room'u güncelliyor, ancak LiveData'yı manuel tetiklemek gerekebilir
+            // veya Room'un Flow/LiveData desteğini kullanmak daha iyidir.
+            // Burada basitlik için mevcut yükleme metodlarını tekrar çağırıyoruz.
+            loadAllLists()
+            // Not: currentListId'yi bilmediğimiz için genel bir yenileme zor olabilir.
+            // Ancak snapshot listener içinde Room güncelleniyor.
+        }
+    }
+
+    fun stopSync() {
+        repository.stopRealtimeSync()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopSync()
+    }
+
+    fun loadTasksByListId(listId: String) {
         val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -87,7 +109,7 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
         }
     }
 
-    fun loadWeeklyTasksForDay(uid: String, day: String, listId: Long) {
+    fun loadWeeklyTasksForDay(uid: String, day: String, listId: String) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 repository.getTasksByWeekday(uid, day, listId)
@@ -179,7 +201,7 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             if (result.isEmpty()) {
                 // Varsayılan listeyi oluştur
                 withContext(Dispatchers.IO) {
-                    repository.insertList(Todolist(userId = uid, name = "GÜNLÜK/HAFTALIK"))
+                    repository.insertList(Todolist(id = "default", userId = uid, name = "GÜNLÜK/HAFTALIK"))
                 }
                 // Tekrar yükle
                 val newResult = withContext(Dispatchers.IO) {
@@ -216,6 +238,17 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
                 repository.insertList(todolist)
             }
             loadAllLists() // Refresh LiveData
+        }
+    }
+
+    fun performMigration(context: android.content.Context) {
+        if (PreferenceManager.isMigrationDone(context)) return
+        val uid = getCurrentUserId() ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.migrateDataToFirestore(uid)
+            }
+            PreferenceManager.setMigrationDone(context)
         }
     }
 }

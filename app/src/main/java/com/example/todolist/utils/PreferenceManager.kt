@@ -7,6 +7,8 @@ object PreferenceManager {
     private const val PREFS_NAME = "onboard_prefs"
     private const val KEY_FIRST_LAUNCH = "first_launch"
 
+    private const val KEY_MIGRATION_DONE = "migration_done"
+
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -17,5 +19,13 @@ object PreferenceManager {
 
     fun setLaunched(context: Context) {
         getPrefs(context).edit().putBoolean(KEY_FIRST_LAUNCH, false).apply()
+    }
+
+    fun isMigrationDone(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_MIGRATION_DONE, false)
+    }
+
+    fun setMigrationDone(context: Context) {
+        getPrefs(context).edit().putBoolean(KEY_MIGRATION_DONE, true).apply()
     }
 }

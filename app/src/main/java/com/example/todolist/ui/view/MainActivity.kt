@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
     private var searchQuery: String = ""
     private var isMoving = false
     private val moveResetHandler = Handler(Looper.getMainLooper())
-    private var currentListId: Long = 1L
+    private var currentListId: String = "default"
     private var listName: String = "GÜNLÜK/HAFTALIK"
     private var shouldScrollToBottomDaily = false
     private var shouldScrollToBottomWeekly = false
@@ -101,17 +101,17 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
-        currentListId = intent?.getLongExtra("listId", 1L) ?: 1L
+        currentListId = intent?.getStringExtra("listId") ?: "default"
         listName = intent?.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = listName
-            subtitle = if (currentListId == 1L) "" else ""
+            subtitle = if (currentListId == "default") "" else ""
             setDisplayShowTitleEnabled(true)
         }
 
-        if (currentListId != 1L) {
+        if (currentListId != "default") {
             // özel listelerde recyclerview üstündeki TextView’i gizle
             binding.toolbarStatText.visibility = View.GONE
         }
@@ -150,6 +150,10 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, Giris::class.java)
             startActivity(intent)
             finish()
+        } else {
+            // Logged in, start sync
+            viewModel.startSync()
+            viewModel.performMigration(this)
         }
 
         // ThemeHelper ve diğer işlemler
@@ -269,7 +273,7 @@ class MainActivity : AppCompatActivity() {
 
         intent?.let {
             currentListId =
-                    it.getLongExtra("listId", 1L) // Burada default değeri 1L olarak veriyoruz
+                    it.getStringExtra("listId") ?: "default"
             listName = it.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
         }
 
@@ -281,7 +285,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 3) Eğer özel bir liste (id != 1) ise tabları ve haftalığı kapat:
-        if (currentListId != 1L) {
+        if (currentListId != "default") {
             binding.tabLayout.visibility = View.GONE
             binding.includeWeekly.root.visibility = View.GONE
             binding.includeDaily.root.visibility = View.VISIBLE
@@ -856,7 +860,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: Long) {
+    private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: String) {
         shouldScrollToBottomWeekly = true
         task.weekday = selectedDayOfWeek.name
         task.listId = listId // listId'yi ekliyoruz
@@ -962,7 +966,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun addTask(task: Task, listId: Long) {
+    private fun addTask(task: Task, listId: String) {
         shouldScrollToBottomDaily = true
         val currentUser = FirebaseAuth.getInstance().currentUser
 
@@ -1308,7 +1312,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun cancelTaskNotification(task: Task) {
         // ID standardını kur: taskId (id Long'un son 32 biti)
-        val requestCode = task.id.toInt()
+        val requestCode = task.id.hashCode()
         val intent = Intent(this, NotificationReceiver::class.java)
         val pi =
                 PendingIntent.getBroadcast(
@@ -1356,7 +1360,7 @@ class MainActivity : AppCompatActivity() {
 
         val intent =
                 Intent(this, NotificationReceiver::class.java).apply {
-                    putExtra("taskId", task.id.toInt())
+                    putExtra("taskId", task.id.hashCode())
                     putExtra("taskContent", task.content)
                     putExtra("listId", task.listId)
                     putExtra("isPinned", task.isPinned)
@@ -1366,7 +1370,7 @@ class MainActivity : AppCompatActivity() {
         val pi =
                 PendingIntent.getBroadcast(
                         this,
-                        task.id.toInt(),
+                        task.id.hashCode(),
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
