@@ -216,16 +216,41 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             val result = withContext(Dispatchers.IO) {
                 repository.getAllLists(uid)
             }
-            if (result.isEmpty()) {
-                // Varsayılan listeyi oluştur
+            
+            // Boş ID'li hatalı listeleri temizle
+            val invalidLists = result.filter { it.id.isBlank() }
+            if (invalidLists.isNotEmpty()) {
+                withContext(Dispatchers.IO) {
+                    invalidLists.forEach { repository.deleteList(it) }
+                }
+                loadAllLists()
+                return@launch
+            }
+
+            val defaultLists = result.filter { it.name == "GÜNLÜK/HAFTALIK" }
+            
+            if (defaultLists.isEmpty()) {
+                // Eğer hiç yoksa oluştur
                 withContext(Dispatchers.IO) {
                     repository.insertList(Todolist(id = "default", userId = uid, name = "GÜNLÜK/HAFTALIK"))
                 }
-                // Tekrar yükle
-                val newResult = withContext(Dispatchers.IO) {
+                loadAllLists() // Tekrar yükle
+                return@launch
+            } else if (defaultLists.size > 1) {
+                // Eğer birden fazla varsa, "default" ID'li olanı tut, diğerlerini sil
+                val toKeep = defaultLists.find { it.id == "default" } ?: defaultLists[0]
+                withContext(Dispatchers.IO) {
+                    defaultLists.forEach { 
+                        if (it.id != toKeep.id && it.id.isNotBlank()) {
+                            repository.deleteList(it)
+                        }
+                    }
+                }
+                // Temizlik sonrası tekrar yükle
+                val cleanedResult = withContext(Dispatchers.IO) {
                     repository.getAllLists(uid)
                 }
-                _lists.value = newResult
+                _lists.value = cleanedResult
             } else {
                 _lists.value = result
             }

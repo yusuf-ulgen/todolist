@@ -162,6 +162,9 @@ class ListelerimActivity : AppCompatActivity() {
             override fun onSwiped(vh: RecyclerView.ViewHolder, dir: Int) = Unit
         }).attachToRecyclerView(binding.recyclerView)
 
+        // Real-time sync başlat
+        viewModel.startSync()
+
         // Yeni liste oluşturma
         binding.fab.setOnClickListener {
             startActivity(Intent(this, NewListActivity::class.java))
