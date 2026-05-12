@@ -1,20 +1,16 @@
 package com.example.todolist
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 
 @Dao
 interface TodolistDao {
     @Query("SELECT * FROM lists WHERE userId = :uid ORDER BY sortOrder ASC")
     suspend fun getAllLists(uid: String): List<Todolist>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertList(list: Todolist)
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(todolist: Todolist)
 
     @Delete

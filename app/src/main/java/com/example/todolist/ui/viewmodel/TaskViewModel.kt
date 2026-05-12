@@ -28,6 +28,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
 
     private val _last30DaysStats = MutableLiveData<List<DailyStat>>()
     val last30DaysStats: LiveData<List<DailyStat>> = _last30DaysStats
+    private var currentListId: String? = null
+    private var currentWeekday: String? = null
 
     private fun getCurrentUserId(): String? = FirebaseAuth.getInstance().currentUser?.uid
 
@@ -79,15 +81,23 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
 
     fun startSync() {
         val uid = getCurrentUserId() ?: return
-        repository.startRealtimeSync(uid) {
-            // Firestore'dan gelen güncellemeler Room'a yazıldıktan sonra UI'yı tetikle
-            // Not: snapshot listener Room'u güncelliyor, ancak LiveData'yı manuel tetiklemek gerekebilir
-            // veya Room'un Flow/LiveData desteğini kullanmak daha iyidir.
-            // Burada basitlik için mevcut yükleme metodlarını tekrar çağırıyoruz.
-            loadAllLists()
-            // Not: currentListId'yi bilmediğimiz için genel bir yenileme zor olabilir.
-            // Ancak snapshot listener içinde Room güncelleniyor.
-        }
+        repository.startRealtimeSync(uid, 
+            onTasksChanged = {
+                // Refresh current task list if needed
+                val listId = currentListId
+                if (listId != null) {
+                    val weekday = currentWeekday
+                    if (weekday != null) {
+                        loadWeeklyTasksForDay(uid, weekday, listId)
+                    } else {
+                        loadTasksByListId(listId)
+                    }
+                }
+            },
+            onListsChanged = {
+                loadAllLists()
+            }
+        )
     }
 
     fun stopSync() {
@@ -100,6 +110,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun loadTasksByListId(listId: String) {
+        currentListId = listId
+        currentWeekday = null
         val uid = getCurrentUserId() ?: return
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
@@ -110,6 +122,8 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
     }
 
     fun loadWeeklyTasksForDay(uid: String, day: String, listId: String) {
+        currentListId = listId
+        currentWeekday = day
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 repository.getTasksByWeekday(uid, day, listId)
@@ -123,10 +137,11 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.insertTask(task)
             }
-            if (task.weekday.isNullOrBlank()) {
+            val weekdayStr = task.weekday?.toString()
+            if (weekdayStr.isNullOrBlank()) {
                 loadTasksByListId(task.listId)
             } else {
-                loadWeeklyTasksForDay(task.userId, task.weekday!!, task.listId)
+                loadWeeklyTasksForDay(task.userId, weekdayStr, task.listId)
             }
             onCompleted?.invoke()
         }
@@ -137,12 +152,13 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.updateTask(task)
             }
-            if (task.weekday.isNullOrBlank()) {
+            val weekdayStr = task.weekday?.toString()
+            if (weekdayStr.isNullOrBlank()) {
                 loadTasksByListId(task.listId)
             } else {
                 val uid = task.userId 
-                if (uid.isNotEmpty() && !task.weekday.isNullOrEmpty()) {
-                    loadWeeklyTasksForDay(uid, task.weekday!!, task.listId)
+                if (uid.isNotEmpty() && !weekdayStr.isNullOrEmpty()) {
+                    loadWeeklyTasksForDay(uid, weekdayStr, task.listId)
                 }
             }
         }
@@ -159,15 +175,16 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             }
             val first = tasks[0]
             val uid = first.userId
-            if (first.weekday.isNullOrBlank()) {
+            val weekdayStr = first.weekday?.toString()
+            if (weekdayStr.isNullOrBlank()) {
                 val result = withContext(Dispatchers.IO) {
                     repository.getTasksByListId(uid, first.listId)
                 }
                 _tasks.value = result
             } else {
-                if (uid.isNotEmpty() && !first.weekday.isNullOrEmpty()) {
+                if (uid.isNotEmpty() && !weekdayStr.isNullOrEmpty()) {
                     val result = withContext(Dispatchers.IO) {
-                        repository.getTasksByWeekday(uid, first.weekday!!, first.listId)
+                        repository.getTasksByWeekday(uid, weekdayStr, first.listId)
                     }
                     _weeklyTasks.value = result
                 }
@@ -181,12 +198,13 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             withContext(Dispatchers.IO) {
                 repository.deleteTask(task)
             }
-            if (task.weekday.isNullOrBlank()) {
+            val weekdayStr = task.weekday?.toString()
+            if (weekdayStr.isNullOrBlank()) {
                 loadTasksByListId(task.listId)
             } else {
                 val uid = task.userId
-                if (uid.isNotEmpty() && !task.weekday.isNullOrEmpty()) {
-                    loadWeeklyTasksForDay(uid, task.weekday!!, task.listId)
+                if (uid.isNotEmpty() && !weekdayStr.isNullOrEmpty()) {
+                    loadWeeklyTasksForDay(uid, weekdayStr, task.listId)
                 }
             }
         }

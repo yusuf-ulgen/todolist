@@ -51,6 +51,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "603277030577-sn5iisddr8rfkbvveu5f69tv2j9g7j8f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yusufulgen.todolist",
+            "certificate_hash": "49ee2d2e2408d42042f61765ffa0476ed191934d"
+          }
+        },
+        {
           "client_id": "603277030577-kpcse2itj5e98k9ouldermdfka23bvbl.apps.googleusercontent.com",
           "client_type": 3
         }

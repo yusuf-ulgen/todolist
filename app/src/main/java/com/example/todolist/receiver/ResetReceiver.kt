@@ -9,6 +9,7 @@ import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -53,14 +54,29 @@ class ResetReceiver : BroadcastReceiver() {
                 Calendar.SUNDAY    -> "SUNDAY"
                 else               -> ""
             }
-            allTasks
-                .filter { it.weekday.isNullOrBlank() || it.weekday == todayDow }
-                .forEach {
-                    if (it.isChecked) {
+            val tasksToReset = allTasks.filter { it.weekday?.toString().isNullOrBlank() || it.weekday?.toString() == todayDow }
+                .filter { it.isChecked }
+
+            if (tasksToReset.isNotEmpty()) {
+                val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                val batch = firestore.batch()
+                
+                tasksToReset.forEach {
+                    if (it.id.isNotBlank()) {
                         it.isChecked = false
-                        taskDao.updateTask(it)
+                        val ref = firestore.collection("users").document(uid).collection("tasks").document(it.id)
+                        batch.update(ref, "isChecked", false)
                     }
                 }
+                
+                try {
+                    batch.commit().await()
+                    taskDao.updateTasks(*tasksToReset.toTypedArray())
+                } catch (e: Exception) {
+                    // Firestore hatası olsa bile yereli sıfırla (en azından kullanıcı arayüzünde görsün)
+                    taskDao.updateTasks(*tasksToReset.toTypedArray())
+                }
+            }
 
             // 5) Bir sonraki reset alarmını yeniden planla
             resetTimeDao.getResetTime(uid)?.let { rt ->

@@ -4,7 +4,7 @@ import androidx.room.*
 
 @Dao
 interface TaskDao {
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTask(task: Task)
 
     @Delete
@@ -25,10 +25,12 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE time = :time AND userId = :userId LIMIT 1")
     suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task?
 
-
     @Query("SELECT * FROM tasks WHERE userId = :uid AND weekday = :day AND listId = :listId ORDER BY isPinned DESC, sortOrder ASC")
     suspend fun getTasksByWeekday(uid: String, day: String, listId: String): List<Task>
 
     @Query("SELECT * FROM tasks WHERE userId = :uid AND listId = :listId AND (weekday IS NULL OR weekday = '') ORDER BY isPinned DESC, sortOrder ASC")
     suspend fun getTasksByListId(uid: String, listId: String): List<Task>
+
+    @Query("DELETE FROM tasks WHERE userId = :uid AND listId = :listId")
+    suspend fun deleteTasksByListId(uid: String, listId: String)
 }

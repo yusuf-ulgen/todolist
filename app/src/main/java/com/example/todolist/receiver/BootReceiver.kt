@@ -41,8 +41,13 @@ class BootReceiver : BroadcastReceiver() {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
-            if (!task.weekday.isNullOrEmpty()) {
-                val targetDow = DayOfWeek.valueOf(task.weekday!!).value % 7 + 1
+            val weekdayStr = task.weekday?.toString()
+            if (!weekdayStr.isNullOrEmpty()) {
+                val targetDow = try {
+                    java.time.DayOfWeek.valueOf(weekdayStr).value % 7 + 1
+                } catch (e: Exception) {
+                    weekdayStr.toIntOrNull()?.let { (it % 7) + 1 } ?: java.util.Calendar.MONDAY
+                }
                 set(Calendar.DAY_OF_WEEK, targetDow)
                 if (timeInMillis <= System.currentTimeMillis())
                     add(Calendar.WEEK_OF_YEAR, 1)
@@ -52,7 +57,7 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
-            putExtra("taskId", task.id.toInt())
+            putExtra("taskId", task.id.hashCode())
             putExtra("taskContent", task.content)
             putExtra("listId", task.listId)
             putExtra("isPinned", task.isPinned)
@@ -61,7 +66,7 @@ class BootReceiver : BroadcastReceiver() {
 
         val pi = PendingIntent.getBroadcast(
             context,
-            task.id.toInt(),
+            task.id.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

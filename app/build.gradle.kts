@@ -72,4 +72,5 @@ dependencies {
 
     implementation("nl.dionsegijn:konfetti-xml:2.0.5")
     implementation("nl.dionsegijn:konfetti-core:2.0.5")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4")
 }

@@ -56,6 +56,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
@@ -86,6 +87,7 @@ class MainActivity : AppCompatActivity() {
     private var shouldScrollToBottomWeekly = false
     private var dailyTasksList: List<Task> = mutableListOf()
     private var weeklyTasksList: List<Task> = mutableListOf()
+    private val firestore = Firebase.firestore
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,13 +103,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
-        currentListId = intent?.getStringExtra("listId") ?: "default"
-        listName = intent?.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
+        currentListId = intent?.getStringExtra("LIST_ID") ?: "default"
+        listName = intent?.getStringExtra("LIST_NAME") ?: "GÜNLÜK/HAFTALIK"
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
             title = listName
-            subtitle = if (currentListId == "default") "" else ""
+            subtitle = ""
             setDisplayShowTitleEnabled(true)
         }
 
@@ -142,20 +144,6 @@ class MainActivity : AppCompatActivity() {
         val selectedColor = ContextCompat.getColor(this, R.color.black)
         binding.tabLayout.setTabTextColors(unselectedColor, selectedColor)
 
-        val mAuth = FirebaseAuth.getInstance()
-
-        // Firebase kullanıcı oturumu kontrolü
-        val user = mAuth.currentUser
-        if (user == null) {
-            val intent = Intent(this, Giris::class.java)
-            startActivity(intent)
-            finish()
-        } else {
-            // Logged in, start sync
-            viewModel.startSync()
-            viewModel.performMigration(this)
-        }
-
         // ThemeHelper ve diğer işlemler
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
 
@@ -171,6 +159,36 @@ class MainActivity : AppCompatActivity() {
                 )
         val factory = TaskViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
+
+        val mAuth = FirebaseAuth.getInstance()
+
+        // Firebase kullanıcı oturumu kontrolü
+        val user = mAuth.currentUser
+        if (user == null) {
+            val intent = Intent(this, Giris::class.java)
+            startActivity(intent)
+            finish()
+        } else {
+            // Logged in, start sync
+            viewModel.startSync()
+            viewModel.performMigration(this)
+        }
+
+        // Firebase Auth State Listener ekleyerek çıkış olaylarını takip et
+        mAuth.addAuthStateListener { auth ->
+            val u = auth.currentUser
+            if (u == null && !isFinishing) {
+                // Anlık kopmaları önlemek için 2 saniye bekleyip hala null ise çıkış yap
+                Handler(Looper.getMainLooper()).postDelayed({
+                    if (FirebaseAuth.getInstance().currentUser == null && !isFinishing) {
+                        android.util.Log.d("MainActivityAuth", "User is still null, redirecting to Giris...")
+                        val intent = Intent(this, Giris::class.java)
+                        startActivity(intent)
+                        finish()
+                    }
+                }, 2000)
+            }
+        }
 
         taskDao = db.taskDao()
         resetTimeDao = db.resetTimeDao()
@@ -271,20 +289,7 @@ class MainActivity : AppCompatActivity() {
                 }
         )
 
-        intent?.let {
-            currentListId =
-                    it.getStringExtra("listId") ?: "default"
-            listName = it.getStringExtra("listName") ?: "GÜNLÜK/HAFTALIK"
-        }
-
-        // 2) Toolbar başlığı olarak liste adını koy
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.apply {
-            title = listName
-            subtitle = "" // veya günlük görev sayısını altyazı olarak istiyorsan burayı ayarla
-        }
-
-        // 3) Eğer özel bir liste (id != 1) ise tabları ve haftalığı kapat:
+        // 3) Eğer özel bir liste ise tabları ve haftalığı kapat:
         if (currentListId != "default") {
             binding.tabLayout.visibility = View.GONE
             binding.includeWeekly.root.visibility = View.GONE
@@ -293,20 +298,6 @@ class MainActivity : AppCompatActivity() {
             binding.tabLayout.visibility = View.VISIBLE
             binding.includeWeekly.root.visibility = View.GONE
             binding.includeDaily.root.visibility = View.VISIBLE
-
-            // Tam bir listener nesnesi oluştur:
-            binding.tabLayout.addOnTabSelectedListener(
-                    object : TabLayout.OnTabSelectedListener {
-                        override fun onTabSelected(tab: TabLayout.Tab) {
-                            when (tab.position) {
-                                0 -> showDailyView()
-                                1 -> showWeeklyView()
-                            }
-                        }
-                        override fun onTabUnselected(tab: TabLayout.Tab) {}
-                        override fun onTabReselected(tab: TabLayout.Tab) {}
-                    }
-            )
         }
 
         // listener kapandıktan sonra buraya devam et:
@@ -429,11 +420,8 @@ class MainActivity : AppCompatActivity() {
                             // Ardından listeyi tamamen sıfırlayarak yeşil arka planın takılı kalmasını KESİN olarak engelle.
                             Handler(Looper.getMainLooper()).postDelayed({
                                 filterAndDisplayTasks()
-                                adapter.notifyDataSetChanged() // ItemTouchHelper kalıntılarını yok eder
                             }, 100)
                         }
-                        
-                        adapter.notifyItemRangeChanged(pos, adapter.itemCount - pos)
                     }
 
                     override fun onChildDraw(
@@ -602,11 +590,8 @@ class MainActivity : AppCompatActivity() {
                             // Ardından listeyi tamamen sıfırlayarak yeşil arka planın takılı kalmasını KESİN olarak engelle.
                             Handler(Looper.getMainLooper()).postDelayed({
                                 filterAndDisplayTasks()
-                                weeklyAdapter.notifyDataSetChanged() // ItemTouchHelper kalıntılarını yok eder
                             }, 100)
                         }
-                        
-                        weeklyAdapter.notifyItemRangeChanged(pos, weeklyAdapter.itemCount - pos)
                     }
 
                     override fun onChildDraw(
@@ -700,11 +685,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         .setActionTextColor(actionColor)
                         .show()
-                
-                // Pozisyonları ve numaraları güncelle
-                adapter.notifyItemRangeChanged(position, adapter.itemCount - position)
+                }
             }
-        }
 
         weeklyAdapter.onItemDelete = { pos ->
             if (pos != RecyclerView.NO_POSITION && pos < weeklyAdapter.currentList.size) {
@@ -733,11 +715,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         .setActionTextColor(actionColor)
                         .show()
-
-                // Pozisyonları ve numaraları güncelle
-                weeklyAdapter.notifyItemRangeChanged(pos, weeklyAdapter.itemCount - pos)
+                }
             }
-        }
 
         binding.fab.setOnClickListener {
             // Haftalık moddaysak includeWeekly görünür olmalı
@@ -859,23 +838,20 @@ class MainActivity : AppCompatActivity() {
         viewModel.loadWeeklyTasksForDay(uid, dow.name, currentListId)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun addTaskForWeekly(task: Task, selectedDayOfWeek: DayOfWeek, listId: String) {
         shouldScrollToBottomWeekly = true
         task.weekday = selectedDayOfWeek.name
-        task.listId = listId // listId'yi ekliyoruz
+        task.listId = listId
 
         lifecycleScope.launch(Dispatchers.IO) {
             val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
-            // Mevcut haftalık görevler o güne ait
-            val existing = taskDao.getTasksByWeekday(uid, selectedDayOfWeek.name, currentListId)
+            val existing = taskDao.getTasksByWeekday(uid, selectedDayOfWeek.name, listId)
             task.sortOrder = existing.size
-            task.weekday = selectedDayOfWeek.name
-            task.listId = listId
-
-            taskDao.insertTask(task)
+            
             withContext(Dispatchers.Main) {
-                loadWeeklyTasksForDay(selectedDayOfWeek, scrollToEnd = true)
+                viewModel.addTask(task) {
+                    loadWeeklyTasksForDay(selectedDayOfWeek, scrollToEnd = true)
+                }
             }
         }
     }
@@ -919,7 +895,7 @@ class MainActivity : AppCompatActivity() {
         if (binding.includeWeekly.root.visibility == View.VISIBLE) {
             val filtered =
                     weeklyTasksList.filter {
-                        it.weekday == currentSelectedDow.name && 
+                        it.weekday?.toString() == currentSelectedDow.name && 
                         it.listId == currentListId &&
                         (searchQuery.isBlank() || it.content.contains(searchQuery, ignoreCase = true))
                     }
@@ -970,35 +946,28 @@ class MainActivity : AppCompatActivity() {
         shouldScrollToBottomDaily = true
         val currentUser = FirebaseAuth.getInstance().currentUser
 
-        task.listId = listId // Assigning the listId
+        task.listId = listId
 
         lifecycleScope.launch(Dispatchers.IO) {
-            // Mevcut günlük görevler
             val uid = currentUser?.uid ?: ""
-            val existing: List<Task> = taskDao.getTasksByListId(uid, listId)
-            // En sona at
+            val existing = taskDao.getTasksByListId(uid, listId)
             task.sortOrder = existing.size
-            task.weekday = "" // günlük olduğundan weekday boş
+            task.weekday = ""
 
-            // Checking if there's a conflict with the time for the task
             if (task.time.isNotBlank() && task.time != "Saat") {
-                val conflict = taskDao.getTaskByTimeAndUserId(task.time, currentUser?.uid ?: "")
+                val conflict = taskDao.getTaskByTimeAndUserId(task.time, uid)
                 if (conflict != null) {
                     withContext(Dispatchers.Main) {
-                        Snackbar.make(
-                                        binding.root,
-                                        "Bu saatte zaten bir görev var!",
-                                        Snackbar.LENGTH_SHORT
-                                )
-                                .show()
+                        Snackbar.make(binding.root, "Bu saatte zaten bir görev var!", Snackbar.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
             }
 
-            taskDao.insertTask(task) // Inserting the task into the database
             withContext(Dispatchers.Main) {
-                loadTasks(scrollToEnd = true) // Reloading the tasks and scrolling to the end
+                viewModel.addTask(task) {
+                    loadTasks(scrollToEnd = true)
+                }
             }
         }
     }
@@ -1065,8 +1034,8 @@ class MainActivity : AppCompatActivity() {
             val allTasks = taskDao.getAllTasks(currentUid)
 
             val todayDowName = LocalDate.now().dayOfWeek.name
-            val dailyTasks = allTasks.filter { it.weekday.isNullOrBlank() }
-            val weeklyTodayTasks = allTasks.filter { it.weekday == todayDowName }
+            val dailyTasks = allTasks.filter { it.weekday?.toString().isNullOrBlank() }
+            val weeklyTodayTasks = allTasks.filter { it.weekday?.toString() == todayDowName }
 
             val combinedTasks = dailyTasks + weeklyTodayTasks
             val completedCount = combinedTasks.count { it.isChecked }
@@ -1238,8 +1207,8 @@ class MainActivity : AppCompatActivity() {
             // 2) İstatistik hesaplama: Günlük Görevler + Bugünün Haftalık Görevleri
             val todayDowName = LocalDate.now().dayOfWeek.name
 
-            val dailyTasks = allTasks.filter { it.weekday.isNullOrBlank() }
-            val weeklyTodayTasks = allTasks.filter { it.weekday == todayDowName }
+            val dailyTasks = allTasks.filter { it.weekday?.toString().isNullOrBlank() }
+            val weeklyTodayTasks = allTasks.filter { it.weekday?.toString() == todayDowName }
 
             val combinedTasks = dailyTasks + weeklyTodayTasks
             val completedCount = combinedTasks.count { it.isChecked }
@@ -1262,11 +1231,16 @@ class MainActivity : AppCompatActivity() {
                     }
             db.taskHistoryDao().insertAll(history)
 
-            // 4) Günlük görevlerin checkbox'larını sıfırla
+            // 4) Günlük görevlerin checkbox'larını sıfırla (Firestore Batch)
+            val batch = firestore.batch()
             dailyTasks.forEach {
-                it.isChecked = false
-                taskDao.updateTask(it)
+                if (it.id.isNotBlank()) {
+                    it.isChecked = false
+                    val ref = firestore.collection("users").document(currentUid).collection("tasks").document(it.id)
+                    batch.update(ref, "isChecked", false)
+                }
             }
+            taskDao.updateTasks(*dailyTasks.toTypedArray())
 
             // 5) Haftalık görevleri sıfırla — SADECE PAZARTESİ İSE (Hafta başı)
             // Kullanıcı "pazartesi gecesi" dediğinde genellikle pazartesiden salıya geçiş veya
@@ -1275,21 +1249,17 @@ class MainActivity : AppCompatActivity() {
             // için
             // haftalık görevler haftada sadece bir kez sıfırlanmalı.
             if (LocalDate.now().dayOfWeek == DayOfWeek.MONDAY) {
-                val allWeeklyTasks = allTasks.filter { !it.weekday.isNullOrBlank() }
+                val allWeeklyTasks = allTasks.filter { !it.weekday?.toString().isNullOrBlank() }
                 allWeeklyTasks.forEach {
-                    it.isChecked = false
-                    taskDao.updateTask(it)
+                    if (it.id.isNotBlank()) {
+                        it.isChecked = false
+                        val ref = firestore.collection("users").document(currentUid).collection("tasks").document(it.id)
+                        batch.update(ref, "isChecked", false)
+                    }
                 }
-            } else {
-                // Diğer günlerde sadece bugünün haftalık görevlerini de sıfırlama seçeneği olabilir
-                // ama
-                // kullanıcı "haftalık görevler pazartesi gecesinde sıfırlanmalı" dediği için diğer
-                // günler ellemiyoruz.
-                // Eğer her günü kendi içinde sıfırlamak isteseydik buraya weeklyTodayTasks
-                // eklerdik.
-                // Ancak kullanıcı net bir şekilde "haftalık görevler pazartesi gecesi sıfırlanmalı"
-                // dedi.
+                taskDao.updateTasks(*allWeeklyTasks.toTypedArray())
             }
+            batch.commit().await()
 
             // 6) Tercihi kaydet ve UI tazele
             prefs.edit().putString("last_reset_day", todayKey).apply()
@@ -1346,9 +1316,14 @@ class MainActivity : AppCompatActivity() {
                     set(Calendar.HOUR_OF_DAY, hour)
                     set(Calendar.MINUTE, minute)
                     set(Calendar.SECOND, 0)
-                    if (!task.weekday.isNullOrEmpty()) {
+                    val weekdayStr = task.weekday?.toString()
+                    if (!weekdayStr.isNullOrEmpty()) {
                         // Haftalık
-                        val targetDow = DayOfWeek.valueOf(task.weekday!!).value % 7 + 1
+                        val targetDow = try {
+                            java.time.DayOfWeek.valueOf(weekdayStr).value % 7 + 1
+                        } catch (e: Exception) {
+                            weekdayStr.toIntOrNull()?.let { (it % 7) + 1 } ?: java.util.Calendar.MONDAY
+                        }
                         set(Calendar.DAY_OF_WEEK, targetDow)
                         if (timeInMillis <= System.currentTimeMillis())
                                 add(Calendar.WEEK_OF_YEAR, 1)

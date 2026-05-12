@@ -55,13 +55,36 @@ class ListelerimActivity : AppCompatActivity() {
         val factory = TaskViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
+        // Firebase Auth State Listener
+        val mAuth = FirebaseAuth.getInstance()
+        if (mAuth.currentUser == null) {
+            startActivity(Intent(this, Giris::class.java))
+            finish()
+            return
+        }
+
+        mAuth.addAuthStateListener { auth ->
+            if (auth.currentUser == null && !isFinishing) {
+                // Anlık kopmaları önlemek için 2 saniye bekleyip hala null ise çıkış yap
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (FirebaseAuth.getInstance().currentUser == null && !isFinishing) {
+                        android.util.Log.d("ListelerimAuth", "User is still null, redirecting to Giris...")
+                        val intent = Intent(this, Giris::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        finish()
+                    }
+                }, 2000)
+            }
+        }
+
         // RecyclerView + Adapter
         adapter = ListelerimAdapter(
             lists,
             onClick = { todo ->
                 Intent(this, MainActivity::class.java).apply {
-                    putExtra("listId", todo.id)
-                    putExtra("listName", todo.name)
+                    putExtra("LIST_ID", todo.id)
+                    putExtra("LIST_NAME", todo.name)
                     startActivity(this)
                 }
             },
@@ -81,8 +104,8 @@ class ListelerimActivity : AppCompatActivity() {
         binding.buttonTodolist.setOnClickListener {
             userDefaultList?.let { defaultList ->
                 Intent(this, MainActivity::class.java).also {
-                    it.putExtra("listId", defaultList.id)
-                    it.putExtra("listName", defaultList.name)
+                    it.putExtra("LIST_ID", defaultList.id)
+                    it.putExtra("LIST_NAME", defaultList.name)
                     startActivity(it)
                 }
             } ?: run {
