@@ -58,7 +58,7 @@ class NewListActivity : AppCompatActivity() {
             if (listName.isNotEmpty()) {
                 saveList(listName)
             } else {
-                Toast.makeText(this, "Liste adı boş olamaz!", Toast.LENGTH_SHORT).show()
+                com.example.todolist.util.StylishAlert.show(this, "Liste adı boş olamaz!")
             }
         }
     }

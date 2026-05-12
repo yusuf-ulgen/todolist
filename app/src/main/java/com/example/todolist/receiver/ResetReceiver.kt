@@ -24,7 +24,7 @@ class ResetReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
-            val allTasks = taskDao.getAllTasks(uid)
+            val allTasks = taskDao.getAllTasks(uid).filter { it.listId == "default" }
             val completed = allTasks.count { it.isChecked }
             val total = allTasks.size
             val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())

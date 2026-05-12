@@ -35,6 +35,16 @@ class Settings : AppCompatActivity() {
             startActivity(intent)
         }
 
+        // Web Sitemiz Butonuna Tıklama İşlemi
+        binding.websiteButton.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://todolist.yusufulgen.com"))
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         // Şifre Butonuna Tıklama İşlemi
         binding.changePasswordButton.setOnClickListener {
             val intent = Intent(this, ChangePasswordActivity::class.java)

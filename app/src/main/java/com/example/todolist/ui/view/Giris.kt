@@ -55,18 +55,11 @@ class Giris : AppCompatActivity() {
     private fun onLoginClicked() {
         val email = binding.mailId.text.toString().trim()
         val password = binding.sifreId.text.toString().trim()
-        clearFieldErrors()
 
-        var valid = true
-        if (email.isEmpty()) {
-            showFieldError(binding.mailId, "Bu alan boş bırakılamaz")
-            valid = false
+        if (email.isEmpty() || password.isEmpty()) {
+            com.example.todolist.util.StylishAlert.show(this, "Lütfen tüm alanları doldurun")
+            return
         }
-        if (password.isEmpty()) {
-            showFieldError(binding.sifreId, "Bu alan boş bırakılamaz")
-            valid = false
-        }
-        if (!valid) return
 
         loginUser(email, password)
     }
@@ -74,35 +67,21 @@ class Giris : AppCompatActivity() {
     private fun onRegisterClicked() {
         val email = binding.mailId.text.toString().trim()
         val password = binding.sifreId.text.toString().trim()
-        clearFieldErrors()
 
-        var valid = true
-        if (email.isEmpty()) {
-            showFieldError(binding.mailId, "Bu alan boş bırakılamaz")
-            valid = false
+        if (email.isEmpty() || password.isEmpty()) {
+            com.example.todolist.util.StylishAlert.show(this, "Lütfen tüm alanları doldurun")
+            return
         }
-        if (password.isEmpty()) {
-            showFieldError(binding.sifreId, "Bu alan boş bırakılamaz")
-            valid = false
-        }
-        if (!valid) return
 
         registerUser(email, password)
     }
 
     private fun clearFieldErrors() {
-        binding.mailId.error = null
-        binding.mailId.setCompoundDrawables(null, null, null, null)
-        binding.sifreId.error = null
-        binding.sifreId.setCompoundDrawables(null, null, null, null)
+        // Artık field error kullanmıyoruz, ama uyumluluk için bırakılabilir
     }
 
     private fun showFieldError(field: android.widget.EditText, message: String) {
-        val icon = ContextCompat.getDrawable(this, android.R.drawable.ic_dialog_alert)
-        icon?.setBounds(0, 0, icon.intrinsicWidth, icon.intrinsicHeight)
-        field.error = message
-        field.setCompoundDrawables(icon, null, null, null)
-        field.requestFocus()
+        com.example.todolist.util.StylishAlert.show(this, message)
     }
 
     private fun signIn() {
@@ -113,7 +92,7 @@ class Giris : AppCompatActivity() {
         }
     }
 
-    @Deprecated("This method has been deprecated in favor of using the Activity Result API\n      which brings increased type safety via an {@link ActivityResultContract} and the prebuilt\n      contracts for common intents available in\n      {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for\n      testing, and allow receiving results in separate, testable classes independent from your\n      activity. Use\n      {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}\n      with the appropriate {@link ActivityResultContract} and handling the result in the\n      {@link ActivityResultCallback#onActivityResult(Object) callback}.")
+    @Deprecated("This method has been deprecated")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         Log.d("GirisLog", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
@@ -127,7 +106,7 @@ class Giris : AppCompatActivity() {
             } catch (e: ApiException) {
                 Log.e("GirisLog", "Google Sign-In hatası (ApiException): StatusCode=${e.statusCode}, Mesaj=${e.message}")
                 val friendlyMsg = getGoogleFriendlyMessage(e)
-                showFieldError(binding.mailId, friendlyMsg)
+                com.example.todolist.util.StylishAlert.show(this, friendlyMsg)
             }
         }
     }
@@ -142,7 +121,7 @@ class Giris : AppCompatActivity() {
                     navigateToMain()
                 } else {
                     Log.e("GirisLog", "Firebase auth hatası!", task.exception)
-                    showFieldError(binding.mailId, getFriendlyMessage(task.exception))
+                    com.example.todolist.util.StylishAlert.show(this, getFriendlyMessage(task.exception))
                 }
             }
     }
@@ -154,7 +133,7 @@ class Giris : AppCompatActivity() {
                 if (task.isSuccessful) {
                     navigateToMain()
                 } else {
-                    showFieldError(binding.mailId, getFriendlyMessage(task.exception))
+                    com.example.todolist.util.StylishAlert.show(this, getFriendlyMessage(task.exception))
                 }
             }
     }
@@ -166,7 +145,7 @@ class Giris : AppCompatActivity() {
                 if (task.isSuccessful) {
                     navigateToMain()
                 } else {
-                    showFieldError(binding.mailId, getFriendlyMessage(task.exception))
+                    com.example.todolist.util.StylishAlert.show(this, getFriendlyMessage(task.exception))
                 }
             }
     }

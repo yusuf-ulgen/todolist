@@ -156,10 +156,7 @@ class TaskViewModel(private val repository: TaskRepository) : ViewModel() {
             if (weekdayStr.isNullOrBlank()) {
                 loadTasksByListId(task.listId)
             } else {
-                val uid = task.userId 
-                if (uid.isNotEmpty() && !weekdayStr.isNullOrEmpty()) {
-                    loadWeeklyTasksForDay(uid, weekdayStr, task.listId)
-                }
+                loadWeeklyTasksForDay(task.userId, weekdayStr, task.listId)
             }
         }
     }

@@ -275,8 +275,8 @@ class MainActivity : AppCompatActivity() {
             weeklyTasksList = updatedTasks
             filterAndDisplayTasks()
         }
-
         loadTasks()
+        showMainTutorial()
 
         binding.searchView.setOnQueryTextListener(
                 object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
@@ -895,7 +895,8 @@ class MainActivity : AppCompatActivity() {
         if (binding.includeWeekly.root.visibility == View.VISIBLE) {
             val filtered =
                     weeklyTasksList.filter {
-                        it.weekday?.toString() == currentSelectedDow.name && 
+                        val w = it.weekday?.toString()?.uppercase()
+                        w == currentSelectedDow.name && 
                         it.listId == currentListId &&
                         (searchQuery.isBlank() || it.content.contains(searchQuery, ignoreCase = true))
                     }
@@ -917,12 +918,9 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             val filtered =
-                    if (searchQuery.isBlank()) {
-                        dailyTasksList
-                    } else {
-                        dailyTasksList.filter {
-                            it.content.contains(searchQuery, ignoreCase = true)
-                        }
+                    dailyTasksList.filter {
+                        (it.weekday == null || it.weekday.toString().isBlank()) &&
+                        (searchQuery.isBlank() || it.content.contains(searchQuery, ignoreCase = true))
                     }
             val (pinned, rest) = filtered.partition { it.isPinned }
             val sortedList = pinned + rest
@@ -952,13 +950,13 @@ class MainActivity : AppCompatActivity() {
             val uid = currentUser?.uid ?: ""
             val existing = taskDao.getTasksByListId(uid, listId)
             task.sortOrder = existing.size
-            task.weekday = ""
+            task.weekday = null
 
             if (task.time.isNotBlank() && task.time != "Saat") {
                 val conflict = taskDao.getTaskByTimeAndUserId(task.time, uid)
                 if (conflict != null) {
                     withContext(Dispatchers.Main) {
-                        Snackbar.make(binding.root, "Bu saatte zaten bir görev var!", Snackbar.LENGTH_SHORT).show()
+                        com.example.todolist.util.StylishAlert.show(this@MainActivity, "Bu saatte zaten bir görev var!")
                     }
                     return@launch
                 }
@@ -1011,7 +1009,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateTaskStats(done: Int, total: Int) {
-        supportActionBar?.subtitle = "Bugünün görevleri $done/$total"
+        val statsText = "Bugünün görevleri $done/$total"
+        supportActionBar?.subtitle = statsText
+        binding.toolbarStatText.text = statsText
         fireDailyConfettiIfNeeded()
         persistCurrentStats()
     }
@@ -1019,9 +1019,10 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("NewApi", "SetTextI18n")
     private fun updateWeeklyStats(done: Int, total: Int) {
         val dayName = currentSelectedDow.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+        val statsText = "$dayName: $done/$total"
         supportActionBar?.subtitle = "Haftalık ($dayName): $done/$total"
-
-        binding.includeWeekly.weeklyStatTextView.text = "$dayName: $done/$total"
+        binding.toolbarStatText.text = statsText
+        binding.includeWeekly.weeklyStatTextView.text = statsText
 
         fireWeeklyConfettiIfNeeded()
         persistCurrentStats()
@@ -1399,5 +1400,32 @@ class MainActivity : AppCompatActivity() {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
         }
+    }
+
+    private fun showMainTutorial() {
+        val manager = com.example.todolist.util.TutorialManager(this)
+        val steps = listOf(
+            com.example.todolist.util.TutorialStep(
+                R.id.tabLayout,
+                "Günlük ve Haftalık",
+                "Görevlerinizi günlük planda görebilir veya haftalık takvimden gün seçerek planlayabilirsiniz."
+            ),
+            com.example.todolist.util.TutorialStep(
+                R.id.toolbarStatText,
+                "İstatistikler",
+                "Bugünkü ilerlemenizi buradan takip edebilirsiniz. Tüm görevler bitince bir sürprizimiz var!"
+            ),
+            com.example.todolist.util.TutorialStep(
+                R.id.searchView,
+                "Arama",
+                "Çok fazla göreviniz mi var? Buradan kolayca arama yapabilirsiniz."
+            ),
+            com.example.todolist.util.TutorialStep(
+                R.id.fab,
+                "Görev Ekle",
+                "Yeni bir görev eklemek için bu butonu kullanın. Saat ekleyerek bildirim almayı unutmayın!"
+            )
+        )
+        manager.showTutorial("main_page", steps)
     }
 }

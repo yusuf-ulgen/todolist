@@ -181,7 +181,44 @@ class ListelerimActivity : AppCompatActivity() {
             // Varsayılan liste hariç diğerlerini ekle
             lists.addAll(updatedLists.filter { it.name != "GÜNLÜK/HAFTALIK" })
             adapter.notifyDataSetChanged()
+
+            // Liste yüklendikten sonra tutorial'ı göster
+            showWelcomeTutorial()
         }
+    }
+
+    private fun showWelcomeTutorial() {
+        val manager = com.example.todolist.util.TutorialManager(this)
+        val steps = listOf(
+            com.example.todolist.util.TutorialStep(
+                null,
+                "Hoş Geldiniz!",
+                "ToDoList ile görevlerinizi organize etmeye hazırsınız. Hadi kısa bir tur atalım."
+            ),
+            com.example.todolist.util.TutorialStep(
+                null,
+                "Web Senkronizasyonu",
+                "Görevlerinize artık her yerden ulaşabilirsiniz! Web sitemiz üzerinden mobil uygulamanızla tam senkronize çalışabilirsiniz.",
+                "Web'e Git",
+                "https://todolist.yusufulgen.com"
+            ),
+            com.example.todolist.util.TutorialStep(
+                R.id.buttonTodolist,
+                "Günlük & Haftalık",
+                "Ana görev listenize buradan ulaşabilirsiniz. Günlük ve haftalık tekrarlayan işleriniz burada yer alır."
+            ),
+            com.example.todolist.util.TutorialStep(
+                R.id.fab,
+                "Yeni Liste",
+                "Özel projeleriniz veya alışveriş listeleriniz için yeni listeler oluşturabilirsiniz."
+            ),
+            com.example.todolist.util.TutorialStep(
+                null,
+                "Menü",
+                "Sağ üstteki menüden ayarlara gidebilir, geri bildirim gönderebilir veya çıkış yapabilirsiniz."
+            )
+        )
+        manager.showTutorial("listelerim_page", steps)
     }
 
     override fun onResume() {
@@ -276,10 +313,10 @@ class ListelerimActivity : AppCompatActivity() {
         db.collection("feedbacks")
             .add(data)
             .addOnSuccessListener {
-                Snackbar.make(binding.root, "Geri bildiriminiz gönderildi!", Snackbar.LENGTH_SHORT).show()
+                com.example.todolist.util.StylishAlert.show(this, "Geri bildiriminiz gönderildi!", false)
             }
             .addOnFailureListener { e ->
-                Snackbar.make(binding.root, "Gönderilemedi: ${e.message}", Snackbar.LENGTH_LONG).show()
+                com.example.todolist.util.StylishAlert.show(this, "Gönderilemedi: ${e.message}")
             }
     }
 

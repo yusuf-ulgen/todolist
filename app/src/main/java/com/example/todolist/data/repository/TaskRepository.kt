@@ -39,7 +39,7 @@ class TaskRepository(
             syncScope.launch {
                 try {
                     firestore.collection("users").document(task.userId)
-                        .collection("tasks").document(task.id).set(task).await()
+                        .collection("tasks").document(task.id).set(prepareTaskForFirestore(task)).await()
                 } catch (e: Exception) {
                     android.util.Log.e("Firestore", "Insert task failed", e)
                 }
@@ -67,7 +67,7 @@ class TaskRepository(
             syncScope.launch {
                 try {
                     firestore.collection("users").document(task.userId)
-                        .collection("tasks").document(task.id).set(task).await()
+                        .collection("tasks").document(task.id).set(prepareTaskForFirestore(task)).await()
                 } catch (e: Exception) {
                     android.util.Log.e("Firestore", "Update task failed", e)
                 }
@@ -83,7 +83,7 @@ class TaskRepository(
                 if (task.userId.isNotBlank() && task.id.isNotBlank()) {
                     val ref = firestore.collection("users").document(task.userId)
                         .collection("tasks").document(task.id)
-                    batch.set(ref, task)
+                    batch.set(ref, prepareTaskForFirestore(task))
                 }
             }
             try {
@@ -92,6 +92,31 @@ class TaskRepository(
                 android.util.Log.e("Firestore", "Update tasks batch failed", e)
             }
         }
+    }
+
+    private fun prepareTaskForFirestore(task: Task): Map<String, Any?> {
+        val names = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
+        val weekdayValue = when (val w = task.weekday) {
+            is String -> {
+                val idx = names.indexOf(w.uppercase())
+                if (idx != -1) idx + 1 else null
+            }
+            is Number -> w.toInt()
+            else -> null
+        }
+        
+        return mapOf(
+            "id" to task.id,
+            "userId" to task.userId,
+            "content" to task.content,
+            "time" to task.time,
+            "isChecked" to task.isChecked,
+            "isPinned" to task.isPinned,
+            "sortOrder" to task.sortOrder,
+            "weekday" to weekdayValue,
+            "listId" to task.listId,
+            "priority" to task.priority
+        )
     }
     
     suspend fun getTaskByTimeAndUserId(time: String, userId: String): Task? = 
@@ -177,6 +202,18 @@ class TaskRepository(
                 snapshots?.documentChanges?.forEach { change ->
                     val task = change.document.toObject(Task::class.java)
                     task.id = change.document.id 
+
+                    // Web-Mobile Senkronizasyon Normalizasyonu (Web 1-7 sayı kullanıyor, Mobil "MONDAY" string)
+                    val rawWeekday = change.document.get("weekday")
+                    task.weekday = when (rawWeekday) {
+                        is Number -> {
+                            val dayIdx = rawWeekday.toInt()
+                            val names = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
+                            if (dayIdx in 1..7) names[dayIdx - 1] else ""
+                        }
+                        is String -> rawWeekday.uppercase()
+                        else -> ""
+                    }
                     
                     kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
                         try {
@@ -263,7 +300,7 @@ class TaskRepository(
             if (task.id.isNotBlank()) {
                 val ref = firestore.collection("users").document(uid)
                     .collection("tasks").document(task.id)
-                batch.set(ref, task)
+                batch.set(ref, prepareTaskForFirestore(task))
                 operationCount++
                 if (operationCount >= 400) {
                     batch.commit().await()
