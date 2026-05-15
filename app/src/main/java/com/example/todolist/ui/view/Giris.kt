@@ -29,6 +29,9 @@ class Giris : AppCompatActivity() {
         setContentView(binding.root)
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
+        // Güncelleme kontrolü
+        com.example.todolist.utils.UpdateManager.checkUpdates(this)
+
         // 1) FirebaseAuth'ı başlat
         mAuth = FirebaseAuth.getInstance()
 

@@ -67,5 +67,15 @@ class Settings : AppCompatActivity() {
                 Toast.makeText(this, "Yetkiniz yok.", Toast.LENGTH_SHORT).show()
             }
         }
+
+        // Yapımcının diğer içerikleri butonu
+        binding.developerAppsButton.setOnClickListener {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/developer?id=Yusuf+Ulgen"))
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 }

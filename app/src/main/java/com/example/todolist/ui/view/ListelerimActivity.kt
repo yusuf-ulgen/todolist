@@ -191,7 +191,8 @@ class ListelerimActivity : AppCompatActivity() {
             showWelcomeTutorial()
         }
 
-        // Sürüm notlarını kontrol et
+        // Sürüm notlarını ve Güncellemeyi kontrol et
+        com.example.todolist.utils.UpdateManager.checkUpdates(this)
         com.example.todolist.utils.ReleaseNotes.checkAndShow(this)
     }
 

@@ -40,9 +40,16 @@ object ReleaseNotes {
 
     fun checkAndShow(context: Context) {
         val currentVersion = BuildConfig.VERSION_NAME
-        val note = notes.find { it.version == currentVersion }
-        if (note != null) {
-            showReleaseNotesDialog(context, note)
+        val lastSeenVersion = PreferenceManager.getLastSeenVersionName(context)
+
+        // Eğer mevcut sürüm daha önce gösterilmediyse göster
+        if (currentVersion != lastSeenVersion) {
+            val note = notes.find { it.version == currentVersion }
+            if (note != null) {
+                showReleaseNotesDialog(context, note)
+            }
+            // Sürümü "görüldü" olarak işaretle
+            PreferenceManager.setLastSeenVersionName(context, currentVersion)
         }
     }
 
