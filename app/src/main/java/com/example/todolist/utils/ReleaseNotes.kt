@@ -25,7 +25,8 @@ object ReleaseNotes {
                             features =
                                     listOf(
                                             "1) İstatistikler ekranında ufak düzenlemeler yapıldı.",
-                                            "2) Yeni sürüm notları sistemi eklendi."
+                                            "2) Yeni sürüm notları sistemi eklendi.",
+                                            "3) Yapımcının diğer içerikleri butonu eklendi."
                                     )
                     ),
                     ReleaseNote(
