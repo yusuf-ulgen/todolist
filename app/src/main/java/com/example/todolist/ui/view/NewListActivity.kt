@@ -46,9 +46,8 @@ class NewListActivity : AppCompatActivity() {
 
         // FAB’e tıklandığında bu listeye ait işlemler (örneğin yeni göreve geçiş) buraya
         binding.fab.setOnClickListener {
-            // Örnek: MainActivity’ye geri dönerken listId’yi iletmek isterseniz:
             val i = Intent(this, MainActivity::class.java)
-            i.putExtra("listId", currentListId)
+            i.putExtra("LIST_ID", currentListId)
             startActivity(i)
         }
 

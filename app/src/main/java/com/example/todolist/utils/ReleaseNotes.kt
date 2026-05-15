@@ -6,9 +6,11 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.LayoutInflater
 import android.view.Window
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import com.example.todolist.BuildConfig
+import com.example.todolist.PreferenceManager
 import com.example.todolist.R
 
 object ReleaseNotes {
@@ -38,16 +40,9 @@ object ReleaseNotes {
 
     fun checkAndShow(context: Context) {
         val currentVersion = BuildConfig.VERSION_NAME
-        val lastSeenVersion = PreferenceManager.getLastSeenVersionName(context)
-
-        // Eğer mevcut sürüm daha önce gösterilmediyse göster
-        if (currentVersion != lastSeenVersion) {
-            val note = notes.find { it.version == currentVersion }
-            if (note != null) {
-                showReleaseNotesDialog(context, note)
-            }
-            // Sürümü "görüldü" olarak işaretle
-            PreferenceManager.setLastSeenVersionName(context, currentVersion)
+        val note = notes.find { it.version == currentVersion }
+        if (note != null) {
+            showReleaseNotesDialog(context, note)
         }
     }
 
@@ -56,11 +51,16 @@ object ReleaseNotes {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_release_notes, null)
         dialog.setContentView(view)
+        
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            (context.resources.displayMetrics.widthPixels * 0.90).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
 
         val titleText = view.findViewById<TextView>(R.id.releaseNotesTitle)
         val contentText = view.findViewById<TextView>(R.id.releaseNotesContent)
-        val closeButton = view.findViewById<Button>(R.id.closeButton)
+        val closeButton = view.findViewById<android.view.View>(R.id.closeButton)
 
         titleText.text = "Sürüm Notları (v${note.version})"
 

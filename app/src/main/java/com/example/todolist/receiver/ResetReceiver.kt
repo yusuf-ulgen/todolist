@@ -25,16 +25,40 @@ class ResetReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
             val allTasks = taskDao.getAllTasks(uid).filter { it.listId == "default" }
-            val completed = allTasks.count { it.isChecked }
-            val total = allTasks.size
-            val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            dailyStatDao.upsert(DailyStat(todayKey, uid, completed, total))
+
+            // 1) Ait olduğu günü belirle (Dün)
+            val statCal = Calendar.getInstance()
+            val todayDowInt = statCal.get(Calendar.DAY_OF_WEEK)
+            statCal.add(Calendar.DAY_OF_YEAR, -1) // İstatistik dünün istatistiğidir
+            val yesterdayKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(statCal.time)
+            
+            // Dünün haftalık gün adı (Çünkü sıfırlama gece yapılıyor)
+            val yesterdayDow = when (todayDowInt) {
+                Calendar.MONDAY    -> "SUNDAY"
+                Calendar.TUESDAY   -> "MONDAY"
+                Calendar.WEDNESDAY -> "TUESDAY"
+                Calendar.THURSDAY  -> "WEDNESDAY"
+                Calendar.FRIDAY    -> "THURSDAY"
+                Calendar.SATURDAY  -> "FRIDAY"
+                Calendar.SUNDAY    -> "SATURDAY"
+                else               -> ""
+            }
+
+            // 2) Sadece dünün görevlerini say (Günlük + O günkü Haftalık)
+            val dailyTasks = allTasks.filter { it.weekday?.toString().isNullOrBlank() }
+            val yesterdayWeeklyTasks = allTasks.filter { it.weekday?.toString() == yesterdayDow }
+            val combinedTasks = dailyTasks + yesterdayWeeklyTasks
+            
+            val completed = combinedTasks.count { it.isChecked }
+            val total = combinedTasks.size
+            
+            dailyStatDao.upsert(DailyStat(yesterdayKey, uid, completed, total))
 
             // 3) History kaydet
-            val history = allTasks.map { t ->
+            val history = combinedTasks.map { t ->
                 TaskHistory(
                     userId = uid,
-                    date = todayKey,
+                    date = yesterdayKey,
                     content = t.content,
                     time = t.time,
                     isChecked = t.isChecked

@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         com.example.todolist.WindowInsetsHelper.applyTopBottomInsets(binding.root)
 
-        currentListId = intent?.getStringExtra("LIST_ID") ?: "default"
+        currentListId = intent.getStringExtra("LIST_ID") ?: intent.getStringExtra("listId") ?: "default"
         listName = intent?.getStringExtra("LIST_NAME") ?: "GÜNLÜK/HAFTALIK"
 
         setSupportActionBar(binding.toolbar)
@@ -148,8 +148,6 @@ class MainActivity : AppCompatActivity() {
         // ThemeHelper ve diğer işlemler
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
 
-        // Sürüm notlarını kontrol et
-        ReleaseNotes.checkAndShow(this)
 
         db = AppDatabase.getDatabase(applicationContext)
         val repository =
@@ -1039,8 +1037,8 @@ class MainActivity : AppCompatActivity() {
             val allTasks = taskDao.getAllTasks(currentUid)
 
             val todayDowName = LocalDate.now().dayOfWeek.name
-            val dailyTasks = allTasks.filter { it.weekday?.toString().isNullOrBlank() }
-            val weeklyTodayTasks = allTasks.filter { it.weekday?.toString() == todayDowName }
+            val dailyTasks = allTasks.filter { it.listId == "default" && it.weekday?.toString().isNullOrBlank() }
+            val weeklyTodayTasks = allTasks.filter { it.listId == "default" && it.weekday?.toString() == todayDowName }
 
             val combinedTasks = dailyTasks + weeklyTodayTasks
             val completedCount = combinedTasks.count { it.isChecked }

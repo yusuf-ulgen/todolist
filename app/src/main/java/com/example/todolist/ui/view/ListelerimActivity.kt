@@ -8,6 +8,11 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
+import android.widget.TextView
+import android.app.Dialog
+import android.graphics.drawable.ColorDrawable
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -185,6 +190,9 @@ class ListelerimActivity : AppCompatActivity() {
             // Liste yüklendikten sonra tutorial'ı göster
             showWelcomeTutorial()
         }
+
+        // Sürüm notlarını kontrol et
+        com.example.todolist.utils.ReleaseNotes.checkAndShow(this)
     }
 
     private fun showWelcomeTutorial() {
@@ -252,14 +260,28 @@ class ListelerimActivity : AppCompatActivity() {
     }
 
     private fun confirmAndDelete(todo: Todolist) {
-        AlertDialog.Builder(this)
-            .setTitle("Silme Onayı")
-            .setMessage("“${todo.name}” listesini silmek istediğinize emin misiniz?")
-            .setPositiveButton("Evet") { _, _ ->
-                viewModel.deleteList(todo)
-            }
-            .setNegativeButton("Hayır", null)
-            .show()
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_delete_list, null)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+        
+        dialog.show()
+        
+        // Diyalog gösterildikten sonra arka plan ve boyut ayarlarını yapıyoruz
+        dialog.window?.let { window ->
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val width = (resources.displayMetrics.widthPixels * 0.85).toInt()
+            window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        view.findViewById<TextView>(R.id.dialogMessage).text = "“${todo.name}” listesini silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+        
+        view.findViewById<View>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
+        view.findViewById<View>(R.id.btnDelete).setOnClickListener {
+            viewModel.deleteList(todo)
+            dialog.dismiss()
+        }
     }
 
     private fun showFeedbackDialog() {
@@ -322,20 +344,35 @@ class ListelerimActivity : AppCompatActivity() {
 
     @SuppressLint("NotifyDataSetChanged")
     private fun showRenameDialog(todo: Todolist) {
-        val input = EditText(this)
-        input.setText(todo.name)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_rename_list, null)
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(view)
+            .create()
+        
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
-        AlertDialog.Builder(this)
-            .setTitle("Listeyi Yeniden Adlandır")
-            .setView(input)
-            .setPositiveButton("Kaydet") { _, _ ->
-                val newName = input.text.toString().trim()
-                if (newName.isNotEmpty()) {
-                    todo.name = newName
-                    viewModel.updateLists(todo)
-                }
+        val editText = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.renameEditText)
+        editText.setText(todo.name)
+        editText.setSelection(todo.name.length)
+
+        view.findViewById<View>(R.id.btnCancel).setOnClickListener { dialog.dismiss() }
+        view.findViewById<View>(R.id.btnSave).setOnClickListener {
+            val newName = editText.text.toString().trim()
+            if (newName.isNotEmpty()) {
+                todo.name = newName
+                viewModel.updateLists(todo)
+                dialog.dismiss()
+            } else {
+                editText.error = "İsim boş olamaz"
             }
-            .setNegativeButton("İptal", null)
-            .show()
+        }
+
+        dialog.show()
+
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        editText.requestFocus()
     }
 }
