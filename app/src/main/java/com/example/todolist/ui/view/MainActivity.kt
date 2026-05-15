@@ -62,6 +62,7 @@ import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.core.models.Shape
 import nl.dionsegijn.konfetti.core.models.Size
+import com.example.todolist.utils.ReleaseNotes
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
@@ -146,6 +147,9 @@ class MainActivity : AppCompatActivity() {
 
         // ThemeHelper ve diğer işlemler
         ThemeHelper.applyTheme(ThemeHelper.loadTheme(this))
+
+        // Sürüm notlarını kontrol et
+        ReleaseNotes.checkAndShow(this)
 
         db = AppDatabase.getDatabase(applicationContext)
         val repository =
