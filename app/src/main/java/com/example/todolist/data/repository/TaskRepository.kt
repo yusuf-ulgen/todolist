@@ -96,7 +96,7 @@ class TaskRepository(
 
     private fun prepareTaskForFirestore(task: Task): Map<String, Any?> {
         val names = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
-        val weekdayValue = when (val w = task.weekday) {
+        val weekdayValue = if (task.listId != "default") null else when (val w = task.weekday) {
             is String -> {
                 val idx = names.indexOf(w.uppercase())
                 if (idx != -1) idx + 1 else null
@@ -204,15 +204,19 @@ class TaskRepository(
                     task.id = change.document.id 
 
                     // Web-Mobile Senkronizasyon Normalizasyonu (Web 1-7 sayı kullanıyor, Mobil "MONDAY" string)
-                    val rawWeekday = change.document.get("weekday")
-                    task.weekday = when (rawWeekday) {
-                        is Number -> {
-                            val dayIdx = rawWeekday.toInt()
-                            val names = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
-                            if (dayIdx in 1..7) names[dayIdx - 1] else ""
+                    if (task.listId != "default") {
+                        task.weekday = ""
+                    } else {
+                        val rawWeekday = change.document.get("weekday")
+                        task.weekday = when (rawWeekday) {
+                            is Number -> {
+                                val dayIdx = rawWeekday.toInt()
+                                val names = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
+                                if (dayIdx in 1..7) names[dayIdx - 1] else ""
+                            }
+                            is String -> rawWeekday.uppercase()
+                            else -> ""
                         }
-                        is String -> rawWeekday.uppercase()
-                        else -> ""
                     }
                     
                     kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {

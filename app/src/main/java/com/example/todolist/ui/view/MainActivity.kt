@@ -880,7 +880,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         loadTasks()
         val uid = FirebaseAuth.getInstance().currentUser?.uid
-        if (uid != null) {
+        if (uid != null && currentListId == "default") {
             loadWeeklyTasksForDay(currentSelectedDow)
         }
         checkAndPerformReset()
